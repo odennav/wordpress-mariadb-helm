@@ -1,4 +1,4 @@
-# Deploy a persistent storage to your kubernetes cluster.
+# Wordpress Installation with MariaDB on Kubernetes Cluster.
 
 Persistent storage is required to store very important data and avoiding total loss of data.
 Kubernetes deals with pods that have short life span, they could be stopped at any time and restarted on a different node.
