@@ -1,0 +1,61 @@
+
+- name: Set up base config for k8s master and node
+  tags:
+    - k8s_base
+    - k8s_master
+    - k8s_node
+  block:
+    - name: Disable SWAP K8S will not work with swap enabled (1/2)
+      command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+
+    - name: Remove SWAP from fstab K8S will not work with swap enabled (2/2)
+      mount:
+        name: "{{ item }}"
+        fstype: swap
+        state: absent
+      with_items:
+      - swap
+      - none
+
+
+    - name: Installing packages that need to use the kubernetes repository
+      shell: "sudo mkdir -p -m 755 /etc/apt/keyrings"
+      changed_when: false
+
+
+    - name: Download Docker GPG key
+      get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
+        dest: /etc/apt/keyrings/kubernetes-apt-keyring.gpg_armored
+
+
+    - name: De-Armor Docker GPG key
+      become: true
+      command: gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /etc/apt/keyrings/kubernetes-apt-keyring.gpg_armored
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+
+    - name: Add the appropriate Kubernetes apt repository
+      become: true
+      shell: "echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list"
+      changed_when: false
+    
+    - name: Update apt-get 
+      become: true
+      shell: "sudo sudo apt-get update"
+      changed_when: false
+
+    - name: install kubelet, kubeadm and kubectl 
+      become: true
+      shell: "sudo apt-get install -y kubelet kubeadm kubectl"
+      changed_when: false
+
+    - name: pin their version
+      become: true
+      shell: "sudo apt-mark hold kubelet kubeadm kubectl"
+      changed_when: false
+
+    - name: Install nfs
+      package: name=nfs-common state=present force=yes install_recommends=no

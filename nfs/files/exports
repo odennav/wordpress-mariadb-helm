@@ -1,0 +1,2 @@
+/pv-share *(rw,async,no_subtree_check,root_squash,insecure)
+/pv-share/auto *(rw,async,no_subtree_check,root_squash,insecure)
