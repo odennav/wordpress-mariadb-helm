@@ -1,4 +1,4 @@
-# Wordpress with MariaDB Installation on Kubernetes Cluster hosted on AWS.
+# Deploy Production-ready WordPress and MariaDB on AWS Kubernetes.
 
 Persistent storage is required to store very important data and avoiding total loss of data.
 Kubernetes deals with pods that have short life span, they could be stopped at any time and restarted on a different node.
