@@ -48,7 +48,7 @@ Upon reschedule of pod(s), it will be reconnected to the same PV and will have a
 
 # Getting Started
 
-There are three sections to follow and implement as shown below:
+There are six sections to follow and implement as shown below:
 - Provision AWS Infrastructure
 - Set up Kubernetes cluster and NFS srver
 - Create Dynamic Persistent Volume Provisioner
@@ -70,37 +70,37 @@ There are three sections to follow and implement as shown below:
 
 2. **Provision AWS resources**
 
-Execute these terraform commands sequentially on your local machine to create the AWS infrastructure.
+   Execute these terraform commands sequentially on your local machine to create the AWS infrastructure.
 
-    ```bash
-    cd terraform-manifest
-    ```
+   ```bash
+   cd terraform-manifest
+   ```
 
-    **Initializes terraform working directory**
+   **Initializes terraform working directory**
 
-    ```bash
-    terraform init
-    ```
+   ```bash
+   terraform init
+   ```
 
-    **Validate the syntax of the terraform configuration files**
+   **Validate the syntax of the terraform configuration files**
 
-    ```bash
-    terraform validate
-    ```
+   ```bash
+   terraform validate
+   ```
 
-    **Create an execution plan that describes the changes terraform will make to the infrastructure.**
+   **Create an execution plan that describes the changes terraform will make to the infrastructure.**
 
-    ```bash
-    terraform plan
-    ```
+   ```bash
+   terraform plan
+   ```
 
-    **Apply the changes described in execution plan**
-    ```bash
-    terraform apply -auto-approve
-    ```
-Check AWS console for instances created and running
+   **Apply the changes described in execution plan**
+   ```bash
+   terraform apply -auto-approve
+   ```
+   Check AWS console for instances created and running
 
-![ec2](https://github.com/odennav/terraform-k8s-aws_ec2/blob/main/docs/ec2instances-shot.PNG)
+   ![ec2](https://github.com/odennav/terraform-k8s-aws_ec2/blob/main/docs/ec2instances-shot.PNG)
 
 
    **SSH Access**
