@@ -346,13 +346,11 @@ kubectl create namespace wordpress
 kubens wordpress
 ```
 
-**On k8smaster apply manifest file, wp-pvc.yml**
-
-   Manifest file found in wp-manifest folder and ensure namespace used is wordpress.
+**Create PVC request on k8smaster**
 
 
 ```bash
-kubectl create -f wp-pvc.yml
+kubectl create -f wp-pvc.yaml
 ```
 
 4. **Configure global Docker image parameters**
@@ -407,8 +405,9 @@ sed -i '/mariadb:/,/externalDatabase:/ {/password: ""/s/""/odennav}' values.yaml
 Number of Wordpress replicas to deploy
 - replicaCount
 
+```bash
 sed -i '/replicaCount: 1/replicaCount: 3/' values.yaml
-
+```
 
 
 **Configure Auto Scaling**
@@ -416,7 +415,9 @@ Enable horizontal scalability of pod resources for Wordpress when traffic load i
 
 - autoscaling.enabled
 
+```bash
 '/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
+```
 
 -----
 
