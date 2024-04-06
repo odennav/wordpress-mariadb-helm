@@ -327,6 +327,7 @@ There are six sections to follow and implement as shown below:
    sudo snap install kubectx --classic
    kubens --version
    ```
+   
    ![](kubens-vs)
 
    **Create wordpress namespace**
@@ -350,10 +351,15 @@ There are six sections to follow and implement as shown below:
    Match this parameters and replace the values, so we have an account to access Wordpress:
 
    *wordpressUsername*
+   
    *wordpressPassword*
+   
    *wordpressEmail*
+   
    *wordpressFirstName*
+   
    *wordpressLastName*
+   
    *wordpressBlogName*
 
    ```bash
@@ -372,9 +378,13 @@ There are six sections to follow and implement as shown below:
    Match and replace values for persistence and database parameters below:
 
    *persistence.storageClass*
+   
    *persistence.existingClaim*
+   
    *mariadb.primary.persistence.storageClass*
+   
    *mariadb.auth.username*
+   
    *mariadb.auth.password*
 
    ```bash
@@ -389,6 +399,7 @@ There are six sections to follow and implement as shown below:
    **Configure Replica Count**
 
    Number of Wordpress replicas to deploy
+   
    *replicaCount*
 
    ```bash
