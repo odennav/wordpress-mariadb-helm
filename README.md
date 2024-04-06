@@ -15,14 +15,14 @@ Although persistent storage is managed by kubernetes in the cluster, the actual 
 
 
 ### Persistent Volume
-    ![](pv-snip)
+![](pv-snip)
 Creating a PV within your cluster, tells Kubernetes that pods should have access to persistent storage that will outlive the pod and possibly the cluster itself!).
 PVs can be created manually through kubectl or can be dynamically created by provisioners
 
 PVs are not created within a namespace within your cluster and is therefore available to all pods within a cluster.
 
 ### Persistent Volume Claims
-    ![](pvc-snip)
+![](pvc-snip)
 
 We want pods to access the PV created. To do this, a Persistent Volume Claim or PVC is required. 
 When PVC is created within a namespace, only pods in that namespace can mount it. However, it can be bound to any PV as these are not namespaced.
@@ -31,7 +31,7 @@ It is possible that Kubernetes cannot bind the PVC to a valid PV and that the PV
 This will lead to instances of pods in 'Pending' state instead of 'Running' state and PVC having 'Unbound' status.
 
 ### Mounting PVC
-    ![](mount-snip)
+![](mount-snip)
 
 Here access to PVC in the pod is done by mounting the storage as a volume within the container.
 Once PVC is mounted by the pod, the application within the Pod’s container(s) now have access to the persistent storage.
@@ -346,16 +346,15 @@ There are six sections to follow and implement as shown below:
 
 4. **Configure global Docker image parameters**
 
-   **Configure Wordpress Parameters**
-
+   Configure Wordpress Parameters
    Match this parameters and replace the values, so we have an account to access Wordpress:
 
-   - **wordpressUsername
-   - **wordpressPassword
-   - **wordpressEmail
-   - **wordpressFirstName
-   - **wordpressLastName
-   - **wordpressBlogName
+   *wordpressUsername*
+   *wordpressPassword*
+   *wordpressEmail*
+   *wordpressFirstName*
+   *wordpressLastName*
+   *wordpressBlogName*
 
    ```bash
    sed -i '/wordpressUsername: user/wordpressUsername: odennav/' values.yaml
@@ -372,11 +371,10 @@ There are six sections to follow and implement as shown below:
    Enable persistence using persistence volume claims and peristence volume access modes.
    Match and replace values for persistence and database parameters below:
 
-   - **persistence.storageClass
-   - **persistence.existingClaim
-   - **mariadb.primary.persistence.storageClass
-   - **mariadb.auth.username
-   
+   *persistence.storageClass*
+   *persistence.existingClaim*
+   *mariadb.primary.persistence.storageClass*
+   *mariadb.auth.username*
    *mariadb.auth.password*
 
    ```bash
@@ -391,7 +389,7 @@ There are six sections to follow and implement as shown below:
    **Configure Replica Count**
 
    Number of Wordpress replicas to deploy
-   - **replicaCount
+   *replicaCount*
 
    ```bash
    sed -i '/replicaCount: 1/replicaCount: 3/' values.yaml
@@ -401,7 +399,7 @@ There are six sections to follow and implement as shown below:
    
    Enable horizontal scalability of pod resources for Wordpress when traffic load is increased
 
-   - **autoscaling.enabled
+   *autoscaling.enabled*
 
    ```bash
    sed -i '/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
