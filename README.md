@@ -321,18 +321,10 @@ There are six sections to follow and implement as shown below:
 3. **Setup PVC for Wordpress**
    
    Our PV provisioner installed will dynamically provision PVs when PVCs are created.
-   
-   **Install kubectx**
-   Kubectx is a tool to switch between clusters on kubectl faster.
-   Once this is installed kubens will be available. kubens is used to switch between kubernetes namespaces.
+   We'll use kubens to switch between kubernetes namespaces.
 
    ```bash
    sudo snap install kubectx --classic
-   ```
-
-   Confirm kubens installed
-
-   ```bash
    kubens --version
    ```
    ![](kubens-vs)
@@ -384,7 +376,7 @@ There are six sections to follow and implement as shown below:
    - **persistence.existingClaim
    - **mariadb.primary.persistence.storageClass
    - **mariadb.auth.username
-   - **mariadb.auth.password
+   **mariadb.auth.password
 
    ```bash
    sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
@@ -550,6 +542,7 @@ There are six sections to follow and implement as shown below:
    If you're taking the option to remove both applications, implement the following:
 
 1. **Delete PVC**
+   
    This removes and unbounds PVC from PV.
 
    ```bash
