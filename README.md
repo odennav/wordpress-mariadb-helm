@@ -14,15 +14,15 @@ We will use Network File System (NFS) which is a way of sharing a centralised fi
 Although persistent storage is managed by kubernetes in the cluster, the actual storage is on nfs server which is not part of the kubernetes cluster and it is on different subnet.
 
 
-## Persistent Volume
-![](pv-snip)
+### Persistent Volume
+    ![](pv-snip)
 Creating a PV within your cluster, tells Kubernetes that pods should have access to persistent storage that will outlive the pod and possibly the cluster itself!).
 PVs can be created manually through kubectl or can be dynamically created by provisioners
 
 PVs are not created within a namespace within your cluster and is therefore available to all pods within a cluster.
 
-## Persistent Volume Claims
-![](pvc-snip)
+### Persistent Volume Claims
+    ![](pvc-snip)
 
 We want pods to access the PV created. To do this, a Persistent Volume Claim or PVC is required. 
 When PVC is created within a namespace, only pods in that namespace can mount it. However, it can be bound to any PV as these are not namespaced.
@@ -30,8 +30,8 @@ When PVC is created within a namespace, only pods in that namespace can mount it
 It is possible that Kubernetes cannot bind the PVC to a valid PV and that the PVC remains unbound until a PV becomes available.
 This will lead to instances of pods in 'Pending' state instead of 'Running' state and PVC having 'Unbound' status.
 
-## Mounting PVC
-![](mount-snip)
+### Mounting PVC
+    ![](mount-snip)
 
 Here access to PVC in the pod is done by mounting the storage as a volume within the container.
 Once PVC is mounted by the pod, the application within the Pod’s container(s) now have access to the persistent storage.
@@ -39,7 +39,7 @@ Once PVC is mounted by the pod, the application within the Pod’s container(s) 
 Upon reschedule of pod(s), it will be reconnected to the same PV and will have access to the data it was using before it died, even if this is on another node.
 
 
-## Requirements
+### Requirements
 
 - Install [Terraform](https://developer.hashicorp.com/terraform/install)
 - Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
@@ -100,7 +100,7 @@ There are six sections to follow and implement as shown below:
    ```
    Check AWS console for instances created and running
 
-   ![ec2](c2instances-shot)
+   ![](c2instances-shot)
 
 
    **SSH Access**
@@ -167,7 +167,7 @@ There are six sections to follow and implement as shown below:
 
 -----
 
-## Set up Kubernetes cluster and NFS server
+## Set up Kubernetes Cluster and NFS Server
 
 1. **Install Ansible in devbuild**
    ```bash
