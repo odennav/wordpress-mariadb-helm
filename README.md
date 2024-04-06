@@ -377,7 +377,7 @@ There are six sections to follow and implement as shown below:
    - **mariadb.primary.persistence.storageClass
    - **mariadb.auth.username
    
-   **mariadb.auth.password
+   *mariadb.auth.password*
 
    ```bash
    sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
