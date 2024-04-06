@@ -323,11 +323,10 @@ There are six sections to follow and implement as shown below:
    Our PV provisioner installed will dynamically provision PVs when PVCs are created.
    We'll use kubens to switch between kubernetes namespaces.
 
-   ```bash
-   sudo snap install kubectx --classic
-   kubens --version
-   ```
-   
+    ```bash
+    sudo snap install kubectx --classic
+    kubens --version
+    ```
    ![](kubens-vs)
 
    **Create wordpress namespace**
