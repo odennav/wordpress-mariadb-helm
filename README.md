@@ -100,7 +100,7 @@ There are six sections to follow and implement as shown below:
    ```
    Check AWS console for instances created and running
 
-   ![ec2](https://github.com/odennav/terraform-k8s-aws_ec2/blob/main/docs/ec2instances-shot.PNG)
+   ![ec2](c2instances-shot)
 
 
    **SSH Access**
@@ -155,7 +155,7 @@ There are six sections to follow and implement as shown below:
    git clone git@github.com:odennav/terraform-kubernetes-aws-ec2.git
    ```
 
-   **Copy ip adresses of private ec2instances deployed by terraform**
+   **Copy IPv4 adresses of private ec2instances deployed by terraform**
 
    Enter each ip address into ipaddr-list.txt.
    Don't change format seen in .txt file
@@ -176,9 +176,10 @@ There are six sections to follow and implement as shown below:
    sudo apt install ansible
    ```
 
-**Using Ansible**
-The bootstrap and k8s folders in this repository contain the Ansible scripts necessary to set up your servers with the required packages and applications.
-Edit values of aa, bb and cc with same values used in Vagrantfile.
+   **Using Ansible**
+   The bootstrap and k8s directories in this repository contain the Ansible scripts necessary to set up your servers with the required packages and 
+   applications.
+   Edit values of aa, bb and cc with same values used in Vagrantfile.
 
 2. **Bootstrap EC2 Private Instances**
    
@@ -221,203 +222,197 @@ Edit values of aa, bb and cc with same values used in Vagrantfile.
 
 3. **Bootstrap the NFS Server**
    
-Bootstrap this server. This process updates the OS, creates a non-root user and sets up SSH such that the root user cannot log in remotely for security.
-Once the bootstrap is complete you will only be able to log in as odennav-admin
+   Bootstrap this server. This process updates the OS, creates a non-root user and sets up SSH such that the root user cannot log in remotely for
+   security.
+   Once the bootstrap is complete you will only be able to log in as odennav-admin
 
-```bash
-cd ../ansible/bootstrap
-ansible-playbook bootstrap.yml --limit nfs_server
-```
+   ```bash
+   cd ../ansible/bootstrap
+   ansible-playbook bootstrap.yml --limit nfs_server
+   ```
 
-**Create NFS share**
+   **Create NFS share**
 
-```bash
-cd ../nfs
-ansible-playbook nfs.yml
-```
-/pv-share directory is created and made available to all nodes, but its not mounted yet by the nodes
-In the exports file, the root_squash prevents the NFS server from allowing the root user on the NFS client machine from having root-level access to files on the NFS share.
-
+   ```bash
+   cd ../nfs
+   ansible-playbook nfs.yml
+   ```
+   /pv-share directory is created and made available to all nodes, but its not mounted yet by the nodes
+   
+   
 4. **Login to 1st node in cluster**
 
-Recall from previous repo here, you can only access k8smaster node from devbuild after it was bootstrapped.
+   ```bash
+   ssh -i /tmp/terraform-key.pem odennav-admin@<k8smaster-ip>
+   ```
 
-vagrant ssh devbuild
+   **Confirm nfs client is installed** 
+   ```bash
+   dpkg -l | grep nfs-common
+   ```
 
-Then SSH to k8smaster
-ssh -i /root/.ssh/id_rsa odennav-admin@<k8smaster-ip>
-
-**Confirm nfs client is installed** 
-```bash
-dpkg -l | grep nfs-common
-```
-
-If not available:
-```bash
-sudo apt install nfs-common
-```
+   If not available:
+   ```bash
+   sudo apt install nfs-common
+   ```
 
 5. **Create shared directory and mount nfs share**
 
-This directory will be mounted to /pv-share created in NFS server
+   This directory will be mounted to /pv-share created in NFS server
 
-```bash
-cd /
-sudo mkdir /shared
-sudo chmod 2770 /shared
-sudo mount -t nfs <nfsserver ip>:/pv-share /shared
-```
+   ```bash
+   cd /
+   sudo mkdir /shared
+   sudo chmod 2770 /shared
+   sudo mount -t nfs <nfsserver ip>:/pv-share /shared
+   ```
 
 6. **Confirm NFS share is implemented**
-Make a test file in /shared dir on the cluster node. It should be present in /pv-share dir on nfsserver.
 
-```bash
-sudo touch test-k8smaster
-```
+   Make a test file in /shared dir on the cluster node. It should be present in /pv-share dir on nfsserver.
 
-**Repeat process from step 4 to step 6 for other kubernetes nodes**
-Exit out of k8smaster node into devbuild and repeat steps above.
+   ```bash
+   sudo touch test-k8smaster
+   ```
 
-```bash
-Ctrl+D
-```
+   **Repeat process from step 4 to step 6 for other kubernetes nodes
+   Exit out of k8smaster node into devbuild and repeat steps above.
+
+
 -----
 
 ## Create Dynamic Persistent Volume Provisioner
 
-1. Login to k8smaster and Confirm Helm is installed
-Helm is an effective package manager for kubernetes
+1. **Login to k8smaster and Confirm Helm is installed**
 
-```bash
-helm version
-```
-![](helm-version)
+   Helm is an effective package manager for kubernetes
 
-
-If not installed
-```bash
-sudo snap install helm --classic
-```
+   ```bash
+   helm version
+   ```
+   ![](helm-version)
 
 
-2. Confirm persistent volume provisioner installed
-Assuming you implemented instructions in this repo here, helm should be installed and used to add & install nfs-subdir-external-provisioner in nfs-provisioner.
+   If not installed
+   ```bash
+   sudo snap install helm --classic
+   ```
 
-```bash
-kubectl get all -n nfs-provisioner
-kubectl get sc -n nfs-provisioner
-```
-This should show dynamic provisioner setup and ready
 
-![](sc-snip)
+2. **Confirm persistent volume provisioner installed**
+   
+   Helm should be installed, then add & install nfs-subdir-external-provisioner package.
 
-If pv provisioner not installed, do it manually:
+   ```bash
+   kubectl get all -n nfs-provisioner
+   kubectl get sc -n nfs-provisioner
+   ```
+   This should show dynamic provisioner setup and ready
 
-```bash
-helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
-helm install -n nfs-provsioner --create-namespace nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=<k8smaster ip address> --set nfs.path=/pv-share
-```
+   ![](sc-snip)
 
-3. **Creating PVC for Wordpress**
-Our PV provisioner installed will dynamically provision PVs when PVCs are created.
-We'll now create PVC for wordpress application.
+   If pv provisioner not installed, do it manually:
 
-**Install kubectx**
-Kubectx is a tool to switch between clusters on kubectl faster.
-Once this is installed kubens will be available. kubens is used to switch between kubernetes namespaces.
-
-```bash
-sudo snap install kubectx --classic
+   ```bash
+   helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
+   helm install -n nfs-provsioner --create-namespace nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=<k8smaster ip address> --set nfs.path=/pv-share
 ```
 
-Confirm kubens installed
+3. **Setup PVC for Wordpress**
+   
+   Our PV provisioner installed will dynamically provision PVs when PVCs are created.
+   
+   **Install kubectx**
+   Kubectx is a tool to switch between clusters on kubectl faster.
+   Once this is installed kubens will be available. kubens is used to switch between kubernetes namespaces.
 
-```bash
-kubens --version
-```
-![](kubens-vs)
+   ```bash
+   sudo snap install kubectx --classic
+   ```
 
-**Create wordpress namespace**
+   Confirm kubens installed
 
-Assuming you've kubectl installed along with kubernetes cluster.
+   ```bash
+   kubens --version
+   ```
+   ![](kubens-vs)
 
-```bash
-kubectl create namespace wordpress
-kubens wordpress
-```
+   **Create wordpress namespace**
 
-**Create PVC request on k8smaster**
+   Assuming you've kubectl installed along with kubernetes cluster.
 
+   ```bash
+   kubectl create namespace wordpress
+   kubens wordpress
+   ```
 
-```bash
-kubectl create -f wp-pvc.yaml
-```
+   **Create PVC request on k8smaster**
+
+   ```bash
+   kubectl create -f wp-pvc.yaml
+   ```
 
 4. **Configure global Docker image parameters**
 
-```bash
-helm repo update
-```
+   **Configure Wordpress Parameters**
 
-**Configure Wordpress Parameters**
+   Match this parameters and replace the values, so we have an account to access Wordpress:
 
-Match this parameters and replace the values, so we have an account to access Wordpress:
+   - **wordpressUsername
+   - **wordpressPassword
+   - **wordpressEmail
+   - **wordpressFirstName
+   - **wordpressLastName
+   - **wordpressBlogName
 
-- wordpressUsername
-- wordpressPassword
-- wordpressEmail
-- wordpressFirstName
-- wordpressLastName
-- wordpressBlogName
-
-```bash
-sed -i '/wordpressUsername: user/wordpressUsername: odennav/' values.yaml
-sed -i '/wordpressPassword: ""/wordpressPassword: odennav/' values.yaml
-sed -i '/wordpressEmail: user@example.com/wordpressEmail: contact@odennav.com/' values.yaml
-sed -i '/wordpressFirstName: FirstName/wordpressFirstName: odennav/' values.yaml
-sed -i '/wordpressLastName: LastName/wordpressLastName: odennav/' values.yaml
-sed -i '/wordpressBlogName: User's Blog!/wordpressBlogName: The Odennav Blog!/' values.yaml
-```
+   ```bash
+   sed -i '/wordpressUsername: user/wordpressUsername: odennav/' values.yaml
+   sed -i '/wordpressPassword: ""/wordpressPassword: odennav/' values.yaml
+   sed -i '/wordpressEmail: user@example.com/wordpressEmail: contact@odennav.com/' values.yaml
+   sed -i '/wordpressFirstName: FirstName/wordpressFirstName: odennav/' values.yaml
+   sed -i '/wordpressLastName: LastName/wordpressLastName: odennav/' values.yaml
+   sed -i '/wordpressBlogName: User's Blog!/wordpressBlogName: The Odennav Blog!/' values.yaml
+   ```
 
 
-**Configure Persistence and Database Parameters**
+   **Configure Persistence and Database Parameters**
 
-Enable persistence using persistence volume claims and peristence volume access modes.
-Match and replace values for persistence and database parameters below:
+   Enable persistence using persistence volume claims and peristence volume access modes.
+   Match and replace values for persistence and database parameters below:
 
-- persistence.storageClass
-- persistence.existingClaim
-- mariadb.primary.persistence.storageClass
-- mariadb.auth.username
-- mariadb.auth.password
+   - **persistence.storageClass
+   - **persistence.existingClaim
+   - **mariadb.primary.persistence.storageClass
+   - **mariadb.auth.username
+   - **mariadb.auth.password
 
-```bash
-sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
-sed -i '/persistence:/,/volumePermissions:/ {/existingClaim: ""/s/""/pvc-wordpress}' values.yaml
-sed -i '/mariadb:/,/externalDatabase:/ {/storageClass: ""/s/storageClass/nfs-client}' values.yaml
-sed -i '/mariadb:/,/externalDatabase:/ {/username: bn_wordpress/s/bn_wordpress/odennav_wordpress}' values.yaml
-sed -i '/mariadb:/,/externalDatabase:/ {/password: ""/s/""/odennav}' values.yaml
-```
-
-
-**Configure Replica Count**
-
-Number of Wordpress replicas to deploy
-- replicaCount
-
-```bash
-sed -i '/replicaCount: 1/replicaCount: 3/' values.yaml
-```
+   ```bash
+   sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
+   sed -i '/persistence:/,/volumePermissions:/ {/existingClaim: ""/s/""/pvc-wordpress}' values.yaml
+   sed -i '/mariadb:/,/externalDatabase:/ {/storageClass: ""/s/storageClass/nfs-client}' values.yaml
+   sed -i '/mariadb:/,/externalDatabase:/ {/username: bn_wordpress/s/bn_wordpress/odennav_wordpress}' values.yaml
+   sed -i '/mariadb:/,/externalDatabase:/ {/password: ""/s/""/odennav}' values.yaml
+   ```
 
 
-**Configure Auto Scaling**
-Enable horizontal scalability of pod resources for Wordpress when traffic load is increased
+   **Configure Replica Count**
 
-- autoscaling.enabled
+   Number of Wordpress replicas to deploy
+   - **replicaCount
 
-```bash
-'/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
-```
+   ```bash
+   sed -i '/replicaCount: 1/replicaCount: 3/' values.yaml
+   ```
+
+   **Configure Auto Scaling**
+   
+   Enable horizontal scalability of pod resources for Wordpress when traffic load is increased
+
+   - **autoscaling.enabled
+
+   ```bash
+   sed -i '/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
+   ```
 
 -----
 
@@ -425,139 +420,147 @@ Enable horizontal scalability of pod resources for Wordpress when traffic load i
 
 1. **Install Wordpress and MariaDB**
 
-Use Helm charts to bootstrap wordpress and mariadb deployment on kubernetes cluster.
+   Use Helm charts to bootstrap wordpress and mariadb deployment on kubernetes cluster.
 
-```bash
-helm repo update
-```
+   ```bash
+   helm repo update
+   ```
 
-Install the chart with release-name, my-wordpress
+   Install the chart with release-name, my-wordpress
 
-```bash
-helm install -f values.yml my-wordpress oci://registry-1.docker.io/bitnamicharts/wordpress
-```
+   ```bash
+   helm install -f values.yml my-wordpress oci://registry-1.docker.io/bitnamicharts/wordpress
+   ```
 
-After installation, instructions will be printed to stdout as shown below:
+   After installation, instructions will be printed to stdout as shown below:
 
-![]()
+   ![]()
 
 
 2. **Add Wordpress Secrets**
-We'll add wordpress credentials as a kubernetes secret.
+   
+   We'll add wordpress credentials as a kubernetes secret.
+   From stdout above, Export the wordpress password to environment variable, WORDPRESS_PASSWORD
 
-From stdout above, Export the wordpress password to environment variable, WORDPRESS_PASSWORD
+   ```bash
+   export WORDPRESS_PASSWORD=$(kubectl get secret --namespace wordpress my-wordpress -o jsonpath="{.data.wordpress-password}" | base64 -d)
+   ```
 
-```bash
-export WORDPRESS_PASSWORD=$(kubectl get secret --namespace wordpress my-wordpress -o jsonpath="{.data.wordpress-password}" | base64 -d)
-```
+   Then create secret:
 
-Then create secret:
+   ```bash
+   kubectl create secret generic db-user-pass \
+   --from-literal=username=wordpress \
+   --from-literal=password=$WORDPRESS_PASSWORD
+   ```
 
-```bash
-kubectl create secret generic db-user-pass \
---from-literal=username=wordpress \
---from-literal=password=$WORDPRESS_PASSWORD
-```
+   Delete environment variable, to prevent non-admin users viewing it's value.
 
-Delete environment variable
-
-```bash
-unset WORDPRESS_PASSWORD
-```
+   ```bash
+   unset WORDPRESS_PASSWORD
+   ```
 -----
 
 ## Connect to Wordpress and MariaDB
 
 1. **Confirm PVCs are bound**
-This confirms the applications installed will have access to persistent storage
 
-```bash
-kubectl get pvc -n wordpress
-```
-![](get-pvc)
+   This confirms the applications installed will have access to persistent storage
+
+   ```bash
+   kubectl get pvc -n wordpress
+   ```
+   ![](get-pvc)
 
 2. **Check service created**
 
-```bash
-kubectl get svc -n wordpress
-```
+   ```bash
+   kubectl get svc -n wordpress
+   ```
 
-![](get-svc)
+   ![](get-svc)
 
 
 3. **Pull HTML data from wordpress pods** 
-Use curl command on ip address of any k8snode and port number provided by service
 
-```bash
-curl <k8smaster>:port-number
-```
+   Export IPv4 address and port
 
-![](curl-snip)
+   ```bash
+   export NODE_PORT=$(kubectl get --namespace wordpress -o jsonpath="{.spec.ports[0].nodePort}" services my-wordpress)
+   export NODE_IP=$(kubectl get nodes --namespace wordpress -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo "WordPress URL: http://$NODE_IP:$NODE_PORT/"
+   echo "WordPress Admin URL: http://$NODE_IP:$NODE_PORT/admin"
+   ```
+
+   Make connection to Wordpress site
+   ```bash
+   curl http://$NODE_IP:$NODE_PORT/
+   ```
+
+   ![](curl-snip)
 
 4. **Service - Host port forwarding**
 
-Set up a port forward from the Service to the host on the master node.
+   Set up a port forward from the Service to the host on the master node.
 
-```bash
-kubectl port-forward — namespace wordpress
-```
+   ```bash
+   kubectl port-forward — namespace wordpress
+   ```
 
 5. **Host - Local port forwarding**
 
-Set up a port forward from the host machine to the development machine.
+   Set up a port forward from the host machine to the development machine.
 
-```bash
-ssh -L 54321:localhost:5432 k8smaster@<k8smaster ip address> -i ~/.ssh/id_rsa
-```
-
-
-If you can connect, you have successfully installed a database using Kubernetes persistent volumes
+   ```bash
+   ssh -L 54321:localhost:5432 k8smaster@<k8smaster ip address> -i /tmp/terraform-key.pem
+   ```
 
 -----
 
 ## Testing Data Persistence
 
 1. **Check pods running**
-Confirm mariadb pods are in 'Ready' state
+   
+   Confirm mariadb pods are in 'Ready' state
 
-```bash
-kubectl get pods -n wordpress
-```
+   ```bash
+   kubectl get pods -n wordpress
+   ```
 
-![](get-pods)
+   ![](get-pods)
 
 2. **Delete pods**
 
-```bash
-kubectl delete pod <pod name> -n wordpress
-```
+   ```bash
+   kubectl delete pod <pod name> -n wordpress
+   ```
 
 3. **Restart port forwards**
-```bash
-kubectl port-forward — namespace wordpress
-ssh -L 54321:localhost:5432 k8smaster@<k8smaster ip address> -i ~/.ssh/id_rsa
-```
+   ```bash
+   kubectl port-forward — namespace wordpress
+   ssh -L 54321:localhost:5432 k8smaster@<k8smaster ip address> -i ~/.ssh/id_rsa
+   ```
 
-Upon deletion of pod, another instance is automatically scheduled.
-You'll still be able to access your database with data still intact.
+   Upon deletion of pod, another instance is automatically scheduled.
+   You'll still be able to access your database with data still intact.
 
 -----
 
-# Removing Wordpress and MariaDB
-If you're taking the option to remove both applications, implement the following:
+##  Removing Wordpress and MariaDB
+   If you're taking the option to remove both applications, implement the following:
 
 1. **Delete PVC**
-This removes and unbounds PVC from PV.
+   This removes and unbounds PVC from PV.
 
-```bash
-kubectl delete -f pg-pvc.yml 
-```
+   ```bash
+   kubectl delete -f pg-pvc.yml 
+   ```
 
 2. **Delete namespace**
 
-```bash
-kubectl delete ns wordpress
-```
+   ```bash
+   kubectl delete ns wordpress
+   ```
 
 
 
