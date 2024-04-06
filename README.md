@@ -180,6 +180,7 @@ There are six sections to follow and implement as shown below:
    The bootstrap and k8s directories in this repository contain the Ansible scripts necessary to set up your servers with the required packages and 
    applications.
    Edit values of aa, bb and cc with same values used in Vagrantfile.
+   Insert IPv4 addresses for k8snode-1 under k8s_master group, k8snode-2 and k8snode-3 under k8s_node group and db-1 under nfs_server group
 
 2. **Bootstrap EC2 Private Instances**
    
@@ -188,15 +189,20 @@ There are six sections to follow and implement as shown below:
 
    Confirm SSH access to k8snode1:   
    ```bash
-   ssh -i /root/.ssh/id_rsa odennav-admin@<k8snode1-ip>
+   ssh -i /tmp/terraform-key.pem  odennav-admin@<k8snode-1 ipv4 address>
    ```  
    To return to devbuild, type "exit" and press "Enter" or use "Ctrl+D".
    
-   Confirm SSH access to k8snode2:
+   Confirm SSH access to k8snode-2:
    ```bash
-   ssh -i /root/.ssh/id_rsa odennav-admin@<k8snode2-ip>
+   ssh -i /tmp/terraform-key.pem  odennav-admin@<k8snode-2 ipv4 address>
    ```  
   
+   Confirm SSH access to k8snode-3:
+   ```bash
+   ssh -i /tmp/terraform-key.pem odennav-admin@<k8snode-3 ipv4 address>
+   ```
+
    Now you can now bootstrap them:
    ```bash
    cd ../bootstrap
@@ -243,7 +249,7 @@ There are six sections to follow and implement as shown below:
 4. **Login to 1st node in cluster**
 
    ```bash
-   ssh -i /tmp/terraform-key.pem odennav-admin@<k8smaster-ip>
+   ssh -i /tmp/terraform-key.pem odennav-admin@<k8snode-1 ipv4 address>
    ```
 
    **Confirm nfs client is installed** 
@@ -264,7 +270,7 @@ There are six sections to follow and implement as shown below:
    cd /
    sudo mkdir /shared
    sudo chmod 2770 /shared
-   sudo mount -t nfs <nfsserver ip>:/pv-share /shared
+   sudo mount -t nfs <db-1 ipv4 address>:/pv-share /shared
    ```
 
 6. **Confirm NFS share is implemented**
@@ -315,7 +321,7 @@ There are six sections to follow and implement as shown below:
 
    ```bash
    helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
-   helm install -n nfs-provsioner --create-namespace nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=<k8smaster ip address> --set nfs.path=/pv-share
+   helm install -n nfs-provsioner --create-namespace nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=<db-1 ipv4 address> --set nfs.path=/pv-share
    ```
 
 3. **Setup PVC for Wordpress**
@@ -513,10 +519,10 @@ There are six sections to follow and implement as shown below:
    Set up a port forward from the host machine to the development machine.
 
    ```bash
-   ssh -L 54321:localhost:5432 k8smaster@<k8smaster ip address> -i /tmp/terraform-key.pem
+   ssh -L 54321:localhost:5432 k8snode-1@<k8snode-1 ipv4-address> -i /tmp/terraform-key.pem
    ```
 
------
+----
 
 ## Testing Data Persistence
 
@@ -539,7 +545,7 @@ There are six sections to follow and implement as shown below:
 3. **Restart port forwards**
    ```bash
    kubectl port-forward — namespace wordpress
-   ssh -L 54321:localhost:5432 k8smaster@<k8smaster ip address> -i ~/.ssh/id_rsa
+   ssh -L 54321:localhost:5432 k8snode-1@<k8snode-1 ipv4-address> -i ~/.ssh/id_rsa
    ```
 
    Upon deletion of pod, another instance is automatically scheduled.
