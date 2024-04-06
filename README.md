@@ -376,6 +376,7 @@ There are six sections to follow and implement as shown below:
    - **persistence.existingClaim
    - **mariadb.primary.persistence.storageClass
    - **mariadb.auth.username
+   
    **mariadb.auth.password
 
    ```bash
