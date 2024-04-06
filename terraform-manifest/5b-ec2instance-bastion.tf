@@ -4,7 +4,7 @@ module "ec2_public" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "5.6.0"
   
-  name                   = "${var.environment}-Control"
+  name                   = "${var.environment}-build"
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
   key_name               = var.instance_keypair

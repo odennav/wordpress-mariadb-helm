@@ -12,7 +12,7 @@ module "ec2_private" {
   vpc_security_group_ids = [module.private_sg.security_group_id]
   for_each = toset(["1", "2", "3"])
   subnet_id =  element(module.vpc.private_subnets, tonumber(each.key))
-  name = "node-${each.key}"
+  name = "k8snode-${each.key}"
   tags = local.common_tags
 
   #instance_count         = var.private_instance_count
