@@ -316,7 +316,7 @@ There are six sections to follow and implement as shown below:
    ```bash
    helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
    helm install -n nfs-provsioner --create-namespace nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=<k8smaster ip address> --set nfs.path=/pv-share
-```
+   ```
 
 3. **Setup PVC for Wordpress**
    
