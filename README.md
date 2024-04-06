@@ -179,8 +179,10 @@ There are six sections to follow and implement as shown below:
    **Using Ansible**
    The bootstrap and k8s directories in this repository contain the Ansible scripts necessary to set up your servers with the required packages and 
    applications.
+   
    Edit values of aa, bb and cc with same values used in Vagrantfile.
-   Insert IPv4 addresses for k8snode-1 under k8s_master group, k8snode-2 and k8snode-3 under k8s_node group and db-1 under nfs_server group
+   
+   *Insert IPv4 addresses for k8snode-1 under k8s_master group, k8snode-2 and k8snode-3 under k8s_node group and db-1 under nfs_server group*
 
 2. **Bootstrap EC2 Private Instances**
    
