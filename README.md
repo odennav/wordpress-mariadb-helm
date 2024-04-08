@@ -366,6 +366,9 @@ There are six sections to follow and implement as shown below:
    
    *wordpressBlogName*
 
+   *wordpressScheme*
+
+
    ```bash
    sed -i '/wordpressUsername: user/wordpressUsername: odennav/' values.yaml
    sed -i '/wordpressPassword: ""/wordpressPassword: odennav/' values.yaml
@@ -373,6 +376,7 @@ There are six sections to follow and implement as shown below:
    sed -i '/wordpressFirstName: FirstName/wordpressFirstName: odennav/' values.yaml
    sed -i '/wordpressLastName: LastName/wordpressLastName: odennav/' values.yaml
    sed -i '/wordpressBlogName: User's Blog!/wordpressBlogName: The Odennav Blog!/' values.yaml
+   sed -i '/wordpressScheme: http/wordpressScheme: https/' values.yaml
    ```
 
 
