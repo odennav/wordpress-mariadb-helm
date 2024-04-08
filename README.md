@@ -55,6 +55,7 @@ There are six sections to follow and implement as shown below:
 - Install Wordpress and MariaDB with Helm charts
 - Connect to Wordpress and MariaDB
 - Testing Data Persistence
+- Securing Traffic with Let's Encrypt Certificates
 
 
 -----
@@ -398,11 +399,21 @@ There are six sections to follow and implement as shown below:
    ```bash
    sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
    sed -i '/persistence:/,/volumePermissions:/ {/existingClaim: ""/s/""/pvc-wordpress}' values.yaml
+   
    sed -i '/mariadb:/,/externalDatabase:/ {/storageClass: ""/s/storageClass/nfs-client}' values.yaml
    sed -i '/mariadb:/,/externalDatabase:/ {/username: bn_wordpress/s/bn_wordpress/odennav_wordpress}' values.yaml
    sed -i '/mariadb:/,/externalDatabase:/ {/password: ""/s/""/odennav}' values.yaml
    ```
 
+   **Configure PVC Access Modes**
+   
+   To access the /admin portal and enable WordPress scalability, a ReadWriteMany Persistent Volume Claim (PVC) is required.
+      *persistence.accessModes*
+      *persistence.accessMode*
+
+   ```bash
+   sed -i 's/ReadWriteOnce/ReadWriteMany/g' values.yaml
+   ```
 
    **Configure Replica Count**
 
@@ -422,6 +433,17 @@ There are six sections to follow and implement as shown below:
 
    ```bash
    sed -i '/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
+   ```
+
+   **Configure htaccess**
+   
+   For performance and security reasons, configure Apache with AllowOverride None and prohibit overriding directives with htaccess files
+   
+
+   *allowOverrideNone*
+
+   ```bash
+   sed -i '/allowOverrideNone: false/allowOverrideNone: true/' values.yaml
    ```
 
 -----
@@ -491,7 +513,7 @@ There are six sections to follow and implement as shown below:
    ![](get-svc)
 
 
-3. **Pull HTML data from wordpress pods** 
+3. **HTTP access to Wordpress pods** 
 
    Export IPv4 address and port
 
@@ -502,7 +524,7 @@ There are six sections to follow and implement as shown below:
    echo "WordPress Admin URL: http://$NODE_IP:$NODE_PORT/admin"
    ```
 
-   Make connection to Wordpress site
+   HTTP request to Wordpress site
    ```bash
    curl http://$NODE_IP:$NODE_PORT/
    ```
@@ -553,6 +575,267 @@ There are six sections to follow and implement as shown below:
 
    Upon deletion of pod, another instance is automatically scheduled.
    You'll still be able to access your database with data still intact.
+
+
+-----
+
+### Securing Traffic with Let's Encrypt Certificates
+
+The Bitnami WordPress Helm chart includes native support for Ingress routes and certificate management via cert-manager. This simplifies TLS configuration by enabling the use of certificates from various providers, such as Let's Encrypt.
+
+#### Installing the Nginx Ingress Controller with Helm
+
+Create namespace for ingress controller
+Then switch to ingress-nginx namespace
+
+```console
+kubectl create namespace ingress-nginx
+kubens ingress-nginx
+```
+
+Pull the chart sources:
+
+```console
+helm pull oci://ghcr.io/nginxinc/charts/nginx-ingress --untar --version 1.2.0
+```
+
+Change working directory to nginx-ingress:
+
+```
+cd nginx-ingress
+```
+
+Upgrade the CRDs:
+
+```
+kubectl apply -f crds/
+```
+
+Install the chart with the release name, ingress-nginx
+
+```
+helm install ingress-nginx .
+```
+
+Next, check if the Helm installation was successful by running command below:
+
+```console
+helm ls -n ingress-nginx
+```
+
+
+### Configuring DNS for Nginx Ingress Controller
+
+Configure `DNS` with a `domain` that you own. Then create the domain `A` record for wordpress.
+
+Next, you will add the required `A` record for the wordpress application. First, you need to identify the load balancer `external IP` created by the `nginx` deployment:
+
+Next, you will add required `A` records for the `hosts` you created earlier. First, you need to identify the load balancer `external IP` created by the `nginx` deployment:
+
+```shell
+kubectl get svc -n ingress-nginx
+```
+
+#### Installing Cert-Manager
+
+First, add the `jetstack` Helm repo, and list the available charts:
+
+```console
+helm repo add jetstack https://charts.jetstack.io
+
+helm repo update jetstack
+```
+
+Next, install Cert-Manager using Helm:
+
+```console
+helm install cert-manager jetstack/cert-manager --version 1.8.0 \
+  --namespace cert-manager \
+  --create-namespace \
+  --set installCRDs=true
+```
+
+Finally, check if Cert-Manager installation was successful by running below command:
+
+```console
+helm ls -n cert-manager
+```
+
+The output looks similar to (`STATUS` column should print `deployed`):
+
+```text
+NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                   APP VERSION
+cert-manager    cert-manager    1               2024-04-08 18:02:08.124264 +0300 EEST   deployed        cert-manager-v1.15.0     v1.15.0
+```
+
+
+#### Configuring Production Ready TLS Certificates for WordPress
+
+A cluster issuer is required first, in order to obtain the final TLS certificate. Open and inspect the `kubernetes-manifests/letsencrypt-issuer-values.yaml` file provided in this repository:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  namespace: wordpress
+spec:
+  acme:
+    # You must replace this email address with your own.
+    # Let's Encrypt will use this to contact you about expiring
+    # certificates, and issues related to your account.
+    email:  <YOUR-EMAIL-HERE>
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      # Secret resource used to store the account's private key.
+      name: prod-issuer-account-key
+    # Add a single challenge solver, HTTP01 using nginx
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+```
+
+Apply via kubectl:
+
+```console
+kubectl apply -f assets/manifests/letsencrypt-issuer-values.yaml
+```
+
+To secure WordPress traffic, open the helm `(values.yaml)` file in kubernetes-manifest/, and add the following settings:
+
+```yaml
+# Enable ingress record generation for WordPress
+ingress:
+  enabled: true
+  certManager: true
+  tls: false
+  hostname: <YOUR_WORDPRESS_DOMAIN_HERE>
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  extraTls:
+  - hosts:
+      - <YOUR_WORDPRESS_DOMAIN_HERE>
+    secretName: wordpress.local-tls
+```
+
+Upgrade via `helm`:
+
+```console
+helm upgrade wordpress bitnami/wordpress \
+    --namespace wordpress \
+    --version 22.0.0 \
+    --timeout 10m0s \
+    --values /wordpress-mariadb-helm/cluster-manifest/values.yaml
+```
+
+This automatically creates a certificate through cert-manager. You can then verify that you've successfully obtained the certificate by running the following command:
+
+```console
+kubectl get certificate -n wordpress wordpress.local-tls
+```
+
+If successful, the output's READY column reads True:
+
+```text
+NAME                  READY   SECRET                AGE
+wordpress.local-tls   True    wordpress.local-tls   24h
+```
+
+Now, you can access WordPress using the domain configured earlier. You will be guided through the `installation` process.
+
+## Enabling WordPress Monitoring Metrics
+
+In this section, you will learn how to enable metrics for monitoring your WordPress instance.
+
+First, open the `wordpress-values.yaml` created earlier in this tutorial, and set `metrics.enabled` field to `true`:
+
+```yaml
+# Prometheus Exporter / Metrics configuration
+metrics:
+  enabled: true
+```
+
+Apply changes using Helm:
+
+```console
+helm upgrade wordpress bitnami/wordpress \
+    --create-namespace \
+    --namespace wordpress \
+    --version 22.0.0 \
+    --timeout 10m0s \
+    --values /wordpress-mariadb-helm/cluster-manifest/values.yaml
+```
+
+Next, port-forward the wordpress service to inspect the available metrics:
+
+```console
+kubectl port-forward --namespace wordpress svc/wordpress-metrics 9150:9150
+```
+
+Now, open a web browser and navigate to [localhost:9150/metrics](http://127.0.0.1:9150/metrics), to see all WordPress metrics.
+
+Finally, you need to configure Grafana and Prometheus to visualise metrics exposed by your new WordPress instance.
+
+
+## Configuring WordPress Plugins
+
+Plugins serve as the foundational components of your WordPress site, enabling crucial functionalities ranging from contact forms and SEO enhancements to site speed optimization, online store creation, and email opt-ins. Whatever your website requirements may be, plugins provide the necessary tools to fulfill them.
+
+Here is a curated list of recommended plugins:
+
+- [LiteSpeed Cache](https://wordpress.org/plugins/litespeed-cache/):  is a comprehensive site acceleration tool, offering an exclusive server-level cache and a suite of optimization features to enhance website performance.
+
+- [Contact Form by WPForms](https://wordpress.org/plugins/wpforms-lite/): enables you to design visually appealing contact forms, feedback forms, subscription forms, payment forms, and various other types of forms for your website.
+
+- [MonsterInsights](https://wordpress.org/plugins/google-analytics-for-wordpress/): is regarded as the premier Google Analytics solution for WordPress. It facilitates seamless integration between your website and Google Analytics, providing detailed insights into how visitors discover and interact with your site.
+
+- [Query Monitor](https://wordpress.org/plugins/query-monitor/): serves as a developer tools panel for WordPress. It allows for debugging of database queries, PHP errors, hooks, and actions.
+
+- [All in One SEO](https://wordpress.org/plugins/all-in-one-seo-pack/): aids in driving more traffic from search engines to your website. While WordPress is inherently SEO-friendly, this plugin empowers you to further enhance your website traffic by implementing SEO best practices.
+
+- [SeedProd](https://wordpress.org/plugins/coming-soon/): This plugin stands out as the premier drag-and-drop page builder for WordPress. It simplifies the process of customizing your website design and crafting unique page layouts effortlessly, eliminating the need for manual code writing.
+
+- [UpdraftPlus](https://wordpress.org/plugins/updraftplus/): Facilitates backups and restoration. Backup your files and database backups into the cloud and restore with a single click.
+
+For more plugins, visit <https://wordpress.org/plugins/> 
+
+
+## Enhancing Wordpress Performance
+
+Content Delivery Network (CDN) is a straightforward method to accelerate a WordPress website. A CDN consists of servers strategically positioned to optimize the delivery of media files, thereby enhancing the loading speed of web pages. Many websites encounter latency issues when their visitors are located far from the server location. By utilizing a CDN, content delivery can be expedited by relieving the web server of the task of serving static content such as images, CSS, JavaScript, and video streams. Additionally, caching static content minimizes latency. Overall, CDN serves as a dependable and effective solution for optimizing websites and enhancing the global user experience.
+
+
+### Configuring Cloudflare
+
+[Cloudflare](https://www.cloudflare.com/en-gb/) is a renowned provider of content delivery network (CDN), DNS, DDoS protection, and security services. Leveraging Cloudflare can significantly accelerate and bolster the security of your WordPress site, making it an excellent solution for website optimization and protection.
+
+Cloudflare account is required for this configuration. Visit the [Cloudflare website](https://www.cloudflare.com/en-gb/) and signup for a free account.
+
+Below are the steps to configure Cloudflare for your WordPress site:
+
+1. Log in to the Cloudflare dashboard using your account credentials and click on the `+ Add Site` button.
+2. Enter your WordPress site's domain and click `Add Site`.
+3. Choose the `Free` plan and click `Get Started`.
+4. From `Review DNS records` and click `Add record`. Add an `A` record with your desired name and the `IPv4 address` of your cloud provider load balancer. Click `Continue`.
+5. Follow instructions to change your domain registrar's nameservers to Cloudflare's nameservers.
+6. After updating nameservers, click `Done, check nameservers`.
+7. Cloudflare may offer configuration recommendations; you can skip these for now by clicking `Skip recommendations`.
+
+An email will confirm when your site is active on Cloudflare.
+Use the Analytics page in your Cloudflare account to monitor web traffic on your WordPress site.
+
+
+
+
+
+
+
+
+
+
+
 
 -----
 
