@@ -403,7 +403,9 @@ There are six sections to follow and implement as shown below:
    **Configure PVC Access Modes**
    
    To access the /admin portal and enable WordPress scalability, a ReadWriteMany Persistent Volume Claim (PVC) is required.
+      
       *persistence.accessModes*
+      
       *persistence.accessMode*
 
    ```bash
