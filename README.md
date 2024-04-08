@@ -2,7 +2,7 @@
 
 Persistent storage is required to store very important data and avoiding total loss of data.
 Kubernetes deals with pods that have short life span, they could be stopped at any time and restarted on a different node.
-when this happens, container's filesystem is lost with the pod. this is not reliable hence the need for filesystem that is available and accessible irrespective of pod actions.
+causing the container's filesystem to be lost with the pod. This is not reliable, hence the need for filesystem that is available and accessible irrespective of pod actions.
 
 PV is configured to use different types of storage technology such as:
 - CephFS
@@ -13,7 +13,7 @@ PV is configured to use different types of storage technology such as:
 We will use Network File System (NFS) which is a way of sharing a centralised filesystem across multiple nodes. 
 Although persistent storage is managed by kubernetes in the cluster, the actual storage is on nfs server which is not part of the kubernetes cluster and it is on different subnet.
 
-![](pv-snip)
+![](https://github.com/odennav/wordpress-mariadb-helm/blob/main/docs/1.png)
 
 ### Persistent Volume
 
@@ -160,7 +160,6 @@ There are six sections to follow and implement as shown below:
    For security reasons, don't show your private ips. The ones below are destroyed.
    Picture shown below is just for clarity.
 
-   ![](https://github.com/odennav/terraform-k8s-aws_ec2/blob/main/docs/ec2-private-ip.PNG)
 
 -----
 
