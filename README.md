@@ -69,35 +69,34 @@ There are six sections to follow and implement as shown below:
 
    Execute these terraform commands sequentially on your local machine to create the AWS infrastructure.
 
-   ```bash
+   ```console
    cd terraform-manifest
    ```
 
    **Initializes terraform working directory**
 
-   ```bash
+   ```console
    terraform init
    ```
 
    **Validate the syntax of the terraform configuration files**
 
-   ```bash
+   ```console
    terraform validate
    ```
 
    **Create an execution plan that describes the changes terraform will make to the infrastructure.**
 
-   ```bash
+   ```console
    terraform plan
    ```
 
    **Apply the changes described in execution plan**
-   ```bash
+   ```console
    terraform apply -auto-approve
    ```
    Check AWS console for instances created and running
 
-   ![](c2instances-shot)
 
 
    **SSH Access**
@@ -179,7 +178,7 @@ There are six sections to follow and implement as shown below:
    
    Open the inventory file and edit values of aa, bb and cc.
    
-   *Insert IPv4 addresses for k8snode-1 under k8s_master group, k8snode-2 and k8snode-3 under k8s_node group and db-1 under nfs_server group*
+   Insert IPv4 addresses for k8snode-1 under *k8s_master* group, k8snode-2 and k8snode-3 under *k8s_node* group and db-1 under *nfs_server* group.
 
 2. **Bootstrap EC2 Private Instances**
    
@@ -220,7 +219,7 @@ There are six sections to follow and implement as shown below:
    ```
 
    Check status of your nodes and confirm they're ready
-   ```bash
+   ```console
    kubectl get nodes
    ```
 
@@ -292,11 +291,9 @@ There are six sections to follow and implement as shown below:
 
    Helm is an effective package manager for kubernetes
 
-   ```bash
+   ```conosle
    helm version
    ```
-   ![](helm-version)
-
 
    If not installed
    ```bash
@@ -308,20 +305,19 @@ There are six sections to follow and implement as shown below:
    
    Helm should be installed, then add & install nfs-subdir-external-provisioner package.
 
-   ```bash
+   ```console
    kubectl get all -n nfs-provisioner
    kubectl get sc -n nfs-provisioner
    ```
-   This should show dynamic provisioner setup and ready
-
-   ![](sc-snip)
+   This should show dynamic provisioner setup and ready.
 
    If pv provisioner not installed, do it manually:
 
-   ```bash
+   ```console
    helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
    helm install -n nfs-provsioner --create-namespace nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=<db-1 ipv4 address> --set nfs.path=/pv-share
    ```
+
 
 3. **Setup PVC for Wordpress**
    
@@ -332,20 +328,19 @@ There are six sections to follow and implement as shown below:
    sudo snap install kubectx --classic
    kubens --version
    ```
-   ![](kubens-vs)
 
    **Create wordpress namespace**
 
    Assuming you've kubectl installed along with kubernetes cluster.
 
-   ```bash
+   ```console
    kubectl create namespace wordpress
    kubens wordpress
    ```
 
    **Create PVC request on k8smaster**
 
-   ```bash
+   ```console
    kubectl create -f wp-pvc.yaml
    ```
 
@@ -455,13 +450,13 @@ There are six sections to follow and implement as shown below:
 
    Use Helm charts to bootstrap wordpress and mariadb deployment on kubernetes cluster.
 
-   ```bash
+   ```console
    helm repo update
    ```
 
    Install the chart with release-name, my-wordpress
 
-   ```bash
+   ```console
    helm install -f values.yml my-wordpress oci://registry-1.docker.io/bitnamicharts/wordpress
    ```
 
@@ -481,7 +476,7 @@ There are six sections to follow and implement as shown below:
 
    Then create secret:
 
-   ```bash
+   ```console
    kubectl create secret generic db-user-pass \
    --from-literal=username=wordpress \
    --from-literal=password=$WORDPRESS_PASSWORD
@@ -500,18 +495,16 @@ There are six sections to follow and implement as shown below:
 
    This confirms the applications installed will have access to persistent storage
 
-   ```bash
+   ```console
    kubectl get pvc -n wordpress
    ```
-   ![](get-pvc)
+
 
 2. **Check service created**
 
-   ```bash
+   ```console
    kubectl get svc -n wordpress
    ```
-
-   ![](get-svc)
 
 
 3. **HTTP access to Wordpress pods** 
@@ -530,13 +523,12 @@ There are six sections to follow and implement as shown below:
    curl http://$NODE_IP:$NODE_PORT/
    ```
 
-   ![](curl-snip)
 
 4. **Service - Host port forwarding**
 
    Set up a port forward from the Service to the host on the master node.
 
-   ```bash
+   ```console
    kubectl port-forward — namespace wordpress
    ```
 
@@ -556,7 +548,7 @@ There are six sections to follow and implement as shown below:
    
    Confirm mariadb pods are in 'Ready' state
 
-   ```bash
+   ```console
    kubectl get pods -n wordpress
    ```
 
@@ -564,12 +556,12 @@ There are six sections to follow and implement as shown below:
 
 2. **Delete pods**
 
-   ```bash
+   ```console
    kubectl delete pod <pod name> -n wordpress
    ```
 
 3. **Restart port forwards**
-   ```bash
+   ```console
    kubectl port-forward — namespace wordpress
    ssh -L 54321:localhost:5432 k8snode-1@<k8snode-1 ipv4-address> -i ~/.ssh/id_rsa
    ```
@@ -580,11 +572,11 @@ There are six sections to follow and implement as shown below:
 
 -----
 
-### Securing Traffic with Let's Encrypt Certificates
+## Securing Traffic with Let's Encrypt Certificates
 
 The Bitnami WordPress Helm chart includes native support for Ingress routes and certificate management via cert-manager. This simplifies TLS configuration by enabling the use of certificates from various providers, such as Let's Encrypt.
 
-#### Installing the Nginx Ingress Controller with Helm
+### Installing the Nginx Ingress Controller with Helm
 
 Create namespace for ingress controller
 Then switch to ingress-nginx namespace
@@ -602,19 +594,19 @@ helm pull oci://ghcr.io/nginxinc/charts/nginx-ingress --untar --version 1.2.0
 
 Change working directory to nginx-ingress:
 
-```
+```shell
 cd nginx-ingress
 ```
 
 Upgrade the CRDs:
 
-```
+```console
 kubectl apply -f crds/
 ```
 
 Install the chart with the release name, ingress-nginx
 
-```
+```console
 helm install ingress-nginx .
 ```
 
@@ -633,11 +625,11 @@ Next, you will add the required `A` record for the wordpress application. First,
 
 Next, you will add required `A` records for the `hosts` you created earlier. First, you need to identify the load balancer `external IP` created by the `nginx` deployment:
 
-```shell
+```console
 kubectl get svc -n ingress-nginx
 ```
 
-#### Installing Cert-Manager
+### Installing Cert-Manager
 
 First, add the `jetstack` Helm repo, and list the available charts:
 
@@ -670,7 +662,7 @@ cert-manager    cert-manager    1               2024-04-08 18:02:08.124264 +0300
 ```
 
 
-#### Configuring Production Ready TLS Certificates for WordPress
+### Configuring Production Ready TLS Certificates for WordPress
 
 A cluster issuer is required first, in order to obtain the final TLS certificate. Open and inspect the `kubernetes-manifests/letsencrypt-issuer-values.yaml` file provided in this repository:
 
@@ -780,7 +772,7 @@ Now, open a web browser and navigate to [localhost:9150/metrics](http://127.0.0.
 Finally, you need to configure Grafana and Prometheus to visualise metrics exposed by your new WordPress instance.
 
 
-## Configuring WordPress Plugins
+### Configuring WordPress Plugins
 
 Plugins serve as the foundational components of your WordPress site, enabling crucial functionalities ranging from contact forms and SEO enhancements to site speed optimization, online store creation, and email opt-ins. Whatever your website requirements may be, plugins provide the necessary tools to fulfill them.
 
@@ -803,7 +795,7 @@ Here is a curated list of recommended plugins:
 For more plugins, visit <https://wordpress.org/plugins/> 
 
 
-## Enhancing Wordpress Performance
+### Enhancing Wordpress Performance
 
 Content Delivery Network (CDN) is a straightforward method to accelerate a WordPress website. A CDN consists of servers strategically positioned to optimize the delivery of media files, thereby enhancing the loading speed of web pages. Many websites encounter latency issues when their visitors are located far from the server location. By utilizing a CDN, content delivery can be expedited by relieving the web server of the task of serving static content such as images, CSS, JavaScript, and video streams. Additionally, caching static content minimizes latency. Overall, CDN serves as a dependable and effective solution for optimizing websites and enhancing the global user experience.
 
@@ -828,19 +820,9 @@ An email will confirm when your site is active on Cloudflare.
 Use the Analytics page in your Cloudflare account to monitor web traffic on your WordPress site.
 
 
-
-
-
-
-
-
-
-
-
-
 -----
 
-##  Removing Wordpress and MariaDB
+###  Removing Wordpress and MariaDB
    If you're taking the option to remove both applications, implement the following:
 
 1. **Delete PVC**
