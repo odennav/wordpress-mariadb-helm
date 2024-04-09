@@ -460,9 +460,7 @@ There are six sections to follow and implement as shown below:
    helm install -f values.yml my-wordpress oci://registry-1.docker.io/bitnamicharts/wordpress
    ```
 
-   After installation, instructions will be printed to stdout as shown below:
-
-   ![]()
+   After installation, instructions will be printed to stdout.
 
 
 2. **Add Wordpress Secrets**
@@ -552,8 +550,6 @@ There are six sections to follow and implement as shown below:
    kubectl get pods -n wordpress
    ```
 
-   ![](get-pods)
-
 2. **Delete pods**
 
    ```console
@@ -619,11 +615,12 @@ helm ls -n ingress-nginx
 
 ### Configuring DNS for Nginx Ingress Controller
 
-Configure `DNS` with a `domain` that you own. Then create the domain `A` record for wordpress.
+Configure `DNS` with a `domain` that you own and create the domain `A` record for the wordpress site.
 
-Next, you will add the required `A` record for the wordpress application. First, you need to identify the load balancer `external IP` created by the `nginx` deployment:
+Next, you will add the required `A` record for the wordpress application.
 
-Next, you will add required `A` records for the `hosts` you created earlier. First, you need to identify the load balancer `external IP` created by the `nginx` deployment:
+First, you need to identify the load balancer `external IP` created by the `nginx` deployment:
+
 
 ```console
 kubectl get svc -n ingress-nginx
@@ -829,14 +826,23 @@ Use the Analytics page in your Cloudflare account to monitor web traffic on your
    
    This removes and unbounds PVC from PV.
 
-   ```bash
+   ```console
    kubectl delete -f pg-pvc.yml 
    ```
 
-2. **Delete namespace**
+2. **Delete Namespaces**
 
-   ```bash
+   ```console
    kubectl delete ns wordpress
+   kubectl delete ns ingress-nginx
+   ```
+
+3. **Destroy AWS resources**
+
+   From your local machine:
+
+   ```console
+   terraform destroy
    ```
 
 
