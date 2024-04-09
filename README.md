@@ -35,7 +35,7 @@ Once PVC is mounted by the pod, the application within the Pod’s container(s) 
 Upon reschedule of pod(s), it will be reconnected to the same PV and will have access to the data it was using before it died, even if this is on another node.
 
 
-### Requirements
+### Prerequisites
 
 - Install [Terraform](https://developer.hashicorp.com/terraform/install)
 - Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
@@ -540,7 +540,7 @@ There are six sections to follow and implement as shown below:
 
 ----
 
-## Testing Data Persistence
+## Test Data Persistence
 
 1. **Check pods running**
    
@@ -568,11 +568,11 @@ There are six sections to follow and implement as shown below:
 
 -----
 
-## Securing Traffic with Let's Encrypt Certificates
+## Secure Traffic with Let's Encrypt Certificates
 
 The Bitnami WordPress Helm chart includes native support for Ingress routes and certificate management via cert-manager. This simplifies TLS configuration by enabling the use of certificates from various providers, such as Let's Encrypt.
 
-### Installing the Nginx Ingress Controller with Helm
+### Install the Nginx Ingress Controller with Helm
 
 Create namespace for ingress controller
 Then switch to ingress-nginx namespace
@@ -613,20 +613,20 @@ helm ls -n ingress-nginx
 ```
 
 
-### Configuring DNS for Nginx Ingress Controller
+### Configure DNS for Nginx Ingress Controller
 
 Configure `DNS` with a `domain` that you own and create the domain `A` record for the wordpress site.
 
 Next, you will add the required `A` record for the wordpress application.
 
-First, you need to identify the load balancer `external IP` created by the `nginx` deployment:
+Please note, you need to identify the load balancer `external IP` created by the `nginx` deployment:
 
 
 ```console
 kubectl get svc -n ingress-nginx
 ```
 
-### Installing Cert-Manager
+### Install Cert-Manager
 
 First, add the `jetstack` Helm repo, and list the available charts:
 
@@ -659,7 +659,7 @@ cert-manager    cert-manager    1               2024-04-08 18:02:08.124264 +0300
 ```
 
 
-### Configuring Production Ready TLS Certificates for WordPress
+### Configure Production Ready TLS Certificates for WordPress
 
 A cluster issuer is required first, in order to obtain the final TLS certificate. Open and inspect the `kubernetes-manifests/letsencrypt-issuer-values.yaml` file provided in this repository:
 
@@ -735,7 +735,7 @@ wordpress.local-tls   True    wordpress.local-tls   24h
 
 Now, you can access WordPress using the domain configured earlier. You will be guided through the `installation` process.
 
-## Enabling WordPress Monitoring Metrics
+## Enable WordPress Monitoring Metrics
 
 In this section, you will learn how to enable metrics for monitoring your WordPress instance.
 
@@ -819,7 +819,7 @@ Use the Analytics page in your Cloudflare account to monitor web traffic on your
 
 -----
 
-###  Removing Wordpress and MariaDB
+###  Remove Wordpress and MariaDB
    If you're taking the option to remove both applications, implement the following:
 
 1. **Delete PVC**
