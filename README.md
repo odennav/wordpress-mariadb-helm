@@ -110,7 +110,8 @@ There are six sections to follow and implement as shown below:
    ```
    Its possible to use public EC2 instance as a jumpbox to securely SSH into private EC2 instances within the VPC.
 
-3. **Change password of public ec2instance (control-dev) user**
+3. **Change password of root user for public EC2instance (control-dev)**
+
    ```bash
    sudo passwd
    ```
@@ -151,14 +152,6 @@ There are six sections to follow and implement as shown below:
    git clone git@github.com:odennav/terraform-kubernetes-aws-ec2.git
    ```
 
-   **Copy IPv4 adresses of private ec2instances deployed by terraform**
-
-   Enter each ip address into ipaddr-list.txt.
-   Don't change format seen in .txt file, IPv4 addresses will be read by bash scripts.
-   
-   For security reasons, don't show your private ips. The ones below are destroyed.
-   Picture shown below is just for clarity.
-
 
 -----
 
@@ -178,7 +171,9 @@ There are six sections to follow and implement as shown below:
    
    Open the inventory file and edit values of aa, bb and cc.
    
-   Insert IPv4 addresses for k8snode-1 under `k8s_master` group, k8snode-2 and k8sndoe-3 under `k8s_node` group and db-1 under `nfs_server` group.
+   Identify IPv4 addresses of private EC2 instances.
+
+   Insert them for k8snode-1 under `k8s_master` group, k8snode-2 and k8snode-3 under `k8s_node` group and db-1 under `nfs_server` group.
 
 2. **Bootstrap EC2 Private Instances**
    
