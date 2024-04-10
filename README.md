@@ -274,8 +274,7 @@ There are six sections to follow and implement as shown below:
    sudo touch test-k8smaster
    ```
 
-   `Repeat process from step 4 to step 6 for other kubernetes nodes
-   Exit out of k8smaster node into devbuild and repeat steps above.`
+   `Repeat process from step 4 to step 6 for other kubernetes cluster nodes. Exit out of k8smaster node into devbuild and repeat steps above.`
 
 
 -----
