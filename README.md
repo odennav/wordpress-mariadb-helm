@@ -154,8 +154,8 @@ There are six sections to follow and implement as shown below:
    **Copy IPv4 adresses of private ec2instances deployed by terraform**
 
    Enter each ip address into ipaddr-list.txt.
-   Don't change format seen in .txt file
-   Ip addresses will be read by bash scripts.
+   Don't change format seen in .txt file, IPv4 addresses will be read by bash scripts.
+   
    For security reasons, don't show your private ips. The ones below are destroyed.
    Picture shown below is just for clarity.
 
@@ -178,18 +178,18 @@ There are six sections to follow and implement as shown below:
    
    Open the inventory file and edit values of aa, bb and cc.
    
-   Insert IPv4 addresses for k8snode-1 under *k8s_master* group, k8snode-2 and k8snode-3 under *k8s_node* group and db-1 under *nfs_server* group.
+   Insert IPv4 addresses for k8snode-1 under `k8s_master` group, k8snode-2 and k8sndoe-3 under `k8s_node` group and db-1 under `nfs_server` group.
 
 2. **Bootstrap EC2 Private Instances**
    
    All nodes need to be bootstrapped.This process involves updating the OS, creating a non-root user, and setting up SSH to prevent remote login
-   by the root user for security reasons.Once the bootstrap is complete, you will only be able to log in as odennav-admin.
+   by the root user for security reasons. Once the bootstrap is complete, you will only be able to log in as odennav-admin.
 
    Confirm SSH access to k8snode1:   
    ```bash
    ssh -i /tmp/terraform-key.pem  odennav-admin@<k8snode-1 ipv4 address>
    ```  
-   To return to devbuild, type "exit" and press "Enter" or use "Ctrl+D".
+   To return to devbuild, type `exit` and press `Enter` or use `Ctrl+D`.
    
    Confirm SSH access to k8snode-2:
    ```bash
@@ -279,8 +279,8 @@ There are six sections to follow and implement as shown below:
    sudo touch test-k8smaster
    ```
 
-   **Repeat process from step 4 to step 6 for other kubernetes nodes
-   Exit out of k8smaster node into devbuild and repeat steps above.
+   `Repeat process from step 4 to step 6 for other kubernetes nodes
+   Exit out of k8smaster node into devbuild and repeat steps above.`
 
 
 -----
@@ -651,7 +651,7 @@ Finally, check if Cert-Manager installation was successful by running below comm
 helm ls -n cert-manager
 ```
 
-The output looks similar to (`STATUS` column should print `deployed`):
+The output looks similar to `STATUS` column should print `deployed`:
 
 ```text
 NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                   APP VERSION
@@ -661,7 +661,7 @@ cert-manager    cert-manager    1               2024-04-08 18:02:08.124264 +0300
 
 ### Configure Production Ready TLS Certificates for WordPress
 
-A cluster issuer is required first, in order to obtain the final TLS certificate. Open and inspect the `kubernetes-manifests/letsencrypt-issuer-values.yaml` file provided in this repository:
+A cluster issuer is required first, in order to obtain the final TLS certificate. Open and inspect the `cluster-manifest/letsencrypt-issuer-values.yaml` file provided in this repository:
 
 ```yaml
 apiVersion: cert-manager.io/v1
@@ -689,10 +689,11 @@ spec:
 Apply via kubectl:
 
 ```console
-kubectl apply -f assets/manifests/letsencrypt-issuer-values.yaml
+cd wordpress-mariadb-helm/
+kubectl apply -f cluster-manifest/letsencrypt-issuer-values.yaml
 ```
 
-To secure WordPress traffic, open the helm `(values.yaml)` file in kubernetes-manifest/, and add the following settings:
+To secure WordPress traffic, open the helm `values.yaml` file in cluster-manifest/, and add the following settings:
 
 ```yaml
 # Enable ingress record generation for WordPress
