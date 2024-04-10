@@ -223,7 +223,7 @@ There are six sections to follow and implement as shown below:
    
    Bootstrap this server. This process updates the OS, creates a non-root user and sets up SSH such that the root user cannot log in remotely for
    security.
-   Once the bootstrap is complete you will only be able to log in as odennav-admin
+   Once the bootstrap is complete you will only be able to log in as `odennav-admin`
 
    ```bash
    cd ../ansible/bootstrap
@@ -236,7 +236,7 @@ There are six sections to follow and implement as shown below:
    cd ../nfs
    ansible-playbook nfs.yml
    ```
-   /pv-share directory is created and made available to all nodes, but its not mounted yet by the nodes
+   `/pv-share/` directory is created and made available to all nodes, but its not mounted yet by the nodes
    
    
 4. **Login to 1st node in cluster**
@@ -257,7 +257,7 @@ There are six sections to follow and implement as shown below:
 
 5. **Create shared directory and mount nfs share**
 
-   This directory will be mounted to /pv-share created in NFS server
+   This directory will be mounted to `/pv-share/` created in NFS server.
 
    ```bash
    cd /
@@ -268,7 +268,7 @@ There are six sections to follow and implement as shown below:
 
 6. **Confirm NFS share is implemented**
 
-   Make a test file in /shared dir on the cluster node. It should be present in /pv-share dir on nfsserver.
+   Make a test file in `/shared/` dir on the cluster node. It should be present in `/pv-share/` dir on nfsserver.
 
    ```bash
    sudo touch test-k8smaster
