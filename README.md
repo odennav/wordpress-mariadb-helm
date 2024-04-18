@@ -388,7 +388,7 @@ There are six sections to follow and implement as shown below:
    sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
    sed -i '/persistence:/,/volumePermissions:/ {/existingClaim: ""/s/""/pvc-wordpress}' values.yaml
    
-   sed -i '/mariadb:/,/externalDatabase:/ {/storageClass: ""/s/storageClass/nfs-client}' values.yaml
+   sed -i '/mariadb:/,/externalDatabase:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
    sed -i '/mariadb:/,/externalDatabase:/ {/username: bn_wordpress/s/bn_wordpress/odennav_wordpress}' values.yaml
    sed -i '/mariadb:/,/externalDatabase:/ {/password: ""/s/""/odennav}' values.yaml
    ```
