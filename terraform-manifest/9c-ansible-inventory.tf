@@ -7,5 +7,5 @@ resource "local_file" "ansible_inventory" {
         nfs_ip = values(module.ec2_private_db)[*].private_ip
 
     })
-    filename = "../../ansible/inventory"
+    filename = "../inventory"
 }
