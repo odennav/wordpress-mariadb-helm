@@ -1,152 +1,122 @@
 # Deploy Production-ready WordPress and MariaDB on AWS Kubernetes.
 
-Persistent storage is required to store very important data and avoiding total loss of data.
-Kubernetes deals with pods that have short life span, they could be stopped at any time and restarted on a different node.
-causing the container's filesystem to be lost with the pod. This is not reliable, hence the need for filesystem that is available and accessible irrespective of pod actions.
+Provision infrastructure in AWS and deploy WordPress with MariaDB in Kubernetes Cluster using Helm charts.
 
-PV is configured to use different types of storage technology such as:
-- CephFS
-- iSCSI
-- NFS
-- Azure File
-
-We will use Network File System (NFS) which is a way of sharing a centralised filesystem across multiple nodes. 
-Although persistent storage is managed by kubernetes in the cluster, the actual storage is on nfs server which is not part of the kubernetes cluster and it is on different subnet.
-
-![](https://github.com/odennav/wordpress-mariadb-helm/blob/main/docs/1.png)
-
-### Persistent Volume
-
-Creating a PV within your cluster, tells Kubernetes that pods should have access to persistent storage that will outlive the pod and possibly the cluster itself!).
-PVs can be created manually through kubectl or can be dynamically created by provisioners
-PVs are not created within a namespace within your cluster and is therefore available to all pods within a cluster.
-
-### Persistent Volume Claims
-
-We want pods to access the PV created. To do this, a Persistent Volume Claim or PVC is required. 
-When PVC is created within a namespace, only pods in that namespace can mount it. However, it can be bound to any PV as these are not namespaced.
-It is possible that Kubernetes cannot bind the PVC to a valid PV and that the PVC remains unbound until a PV becomes available.
-This will lead to instances of pods in 'Pending' state instead of 'Running' state and PVC having 'Unbound' status.
-
-### Mounting PVC
-
-Here access to PVC in the pod is done by mounting the storage as a volume within the container.
-Once PVC is mounted by the pod, the application within the Pod’s container(s) now have access to the persistent storage.
-Upon reschedule of pod(s), it will be reconnected to the same PV and will have access to the data it was using before it died, even if this is on another node.
-
-
-### Prerequisites
-
-- Install [Terraform](https://developer.hashicorp.com/terraform/install)
-- Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-- Generate key pair to connect to EC2 instances in AWS console. Name it 'terraform-key'. Choose 'RSA' key pair type and use .pem key file format. 
------
+----
 
 # Getting Started
 
 There are six sections to follow and implement as shown below:
 - Provision AWS Infrastructure
+
 - Set up Kubernetes cluster and NFS srver
+
 - Create Dynamic Persistent Volume Provisioner
+
 - Install Wordpress and MariaDB with Helm charts
+
 - Connect to Wordpress and MariaDB
+
 - Testing Data Persistence
+
 - Securing Traffic with Let's Encrypt Certificates
+
 - Enable WordPress monitoring metrics
 
 -----
 
 ## Provision AWS Infrastructure
 
-1. **Clone this repo to local machine**
-   ```bash
-   cd /
-   git clone git@github.com:odennav/wordpress-mariadb-helm.git
-   cd terraform-kubernetes-aws-ec2/terraform-manifest
+Clone this repo to local machine
+
+```bash
+cd /
+git clone git@github.com:odennav/wordpress-mariadb-helm.git
+cd terraform-kubernetes-aws-ec2/terraform-manifest
+```
+
+**Provision AWS resources**
+
+Execute these terraform commands sequentially on your `local` machine to create the AWS infrastructure.
+
+```bash
+cd terraform-manifest
+```
+
+Initialize the terraform working directory
+
+```bash
+terraform init
+```
+
+Validate the syntax of the terraform configuration files
+
+```bash
+terraform validate
+```
+
+Create an execution plan that describes the changes terraform will make to the infrastructure.
+
+```bash
+terraform plan
+```
+
+Apply the changes described in execution plan
+```bash
+terraform apply -auto-approve
+```
+Check AWS console for instances created and running
+
+
+**SSH Access**
+
+Use .pem key from AWS to SSH into the public EC2 instance.
+
+IPv4 address of public EC2 instance will be shown in terraform outputs.
+
+
+```bash
+ssh -i private-key/terraform-key.pem ec2-user@<ipaddress>
+```
+Its possible to use public `EC2` instance as a jumpbox to securely SSH into private EC2 instances within the VPC.
+
+Change password of root user for public EC2instance `control-dev`
+
+```bash
+sudo passwd
    ```
+Switch to root user
 
-2. **Provision AWS resources**
+Update `apt` package manager
+```bash
+cd /
+apt update -y
+apt upgrade -y
+```
 
-   Execute these terraform commands sequentially on your local machine to create the AWS infrastructure.
+Confirm Git was installed 
+```bash
+git --version
+```
 
-   ```console
-   cd terraform-manifest
-   ```
+Confirm `terraform-key` was transferred to public `EC2` instance by null provisioner
 
-   **Initializes terraform working directory**
+Please note if `.pem` key not found, copy it manually.
 
-   ```console
-   terraform init
-   ```
+Also key can be copied to another folder because it will be deleted if node is restarted or shutdown
+```bash
+ls -la /tmp/terraform-key.pem
+cp /tmp/terraform-key.pem /
+```
 
-   **Validate the syntax of the terraform configuration files**
+Change permissions of `terraform-key.pem` file
 
-   ```console
-   terraform validate
-   ```
-
-   **Create an execution plan that describes the changes terraform will make to the infrastructure.**
-
-   ```console
-   terraform plan
-   ```
-
-   **Apply the changes described in execution plan**
-   ```console
-   terraform apply -auto-approve
-   ```
-   Check AWS console for instances created and running
+```bash
+chmod 400 /tmp/terraform-key.pem
+```
 
 
-
-   **SSH Access**
-
-   Use .pem key from AWS to SSH into the public EC2 instance.
-   IPv4 address of public EC2 instance will be shown in terraform outputs.
-
-
-   ```bash
-   ssh -i private-key/terraform-key.pem ec2-user@<ipaddress>
-   ```
-   Its possible to use public EC2 instance as a jumpbox to securely SSH into private EC2 instances within the VPC.
-
-3. **Change password of root user for public EC2instance (control-dev)**
-
-   ```bash
-   sudo passwd
-   ```
-   Switch to root user
-
-   **Update apt package manager**
-   ```bash
-   cd /
-   apt update -y
-   apt upgrade -y
-   ```
-
-   **Confirm git was installed by terraform**
-   ```bash
-   git --version
-   ```
-
-   **Confirm terraform-key was transferred to public ec2instance by null provisioner**
-
-   Please note if .pem key not found, copy it manually.
-   Also key can be copied to another folder because it will be deleted if node is restarted or shutdown
-   ```bash
-   ls -la /tmp/terraform-key.pem
-   cp /tmp/terraform-key.pem /
-   ```
-
-   **Change permissions of terraform-key.pem file**
-
-   SSH test will fail if permissions of .pem key are not secure enough
-   ```bash
-   chmod 400 /tmp/terraform-key.pem
-   ```
-
-
-4. **Clone this repo to / directory in control-dev node**
+Clone this repo to `/` directory in `dev-Control` node
    ```bash
    cd /
    git clone git@github.com:odennav/terraform-kubernetes-aws-ec2.git
@@ -157,191 +127,226 @@ There are six sections to follow and implement as shown below:
 
 ## Set up Kubernetes Cluster and NFS Server
 
-1. **Install Ansible in devbuild**
-   ```bash
-   sudo apt install software-properties-common
-   sudo add-apt-repository --yes --update ppa:ansible/ansible
-   sudo apt install ansible
-   ```
+Install Ansible in `dev-Control` node
 
-   **Using Ansible**
-   
-   The bootstrap and k8s directories in this repository contain the Ansible scripts necessary to set up your servers with the required packages and 
-   applications.
-   
-   Open the inventory file and edit values of aa, bb and cc.
-   
-   Identify IPv4 addresses of private EC2 instances.
+```bash
+sudo apt install software-properties-common
+sudo add-apt-repository --yes --update ppa:ansible/ansible
+sudo apt install ansible
+```
 
-   Insert them for k8snode-1 under `k8s_master` group, k8snode-2 and k8snode-3 under `k8s_node` group and db-1 under `nfs_server` group.
-
-2. **Bootstrap EC2 Private Instances**
+**Bootstrap EC2 Private Instances**
    
-   All nodes need to be bootstrapped.This process involves updating the OS, creating a non-root user, and setting up SSH to prevent remote login
-   by the root user for security reasons. Once the bootstrap is complete, you will only be able to log in as odennav-admin.
+All the nodes need to be bootstrapped.
 
-   Confirm SSH access to k8snode1:   
-   ```bash
-   ssh -i /tmp/terraform-key.pem  odennav-admin@<k8snode-1 ipv4 address>
-   ```  
-   To return to devbuild, type `exit` and press `Enter` or use `Ctrl+D`.
+Once the bootstrap is complete, you will only be able to log in as `odennav-admin`.
+
+Confirm SSH access to `k8snode-1`   
+```bash
+ssh -i /tmp/terraform-key.pem  odennav-admin@<k8snode-1 ipv4 address>
+```  
+To return to `dev-Control`, type `exit` and press `Enter` or use `Ctrl+D`.
    
-   Confirm SSH access to k8snode-2:
-   ```bash
-   ssh -i /tmp/terraform-key.pem  odennav-admin@<k8snode-2 ipv4 address>
-   ```  
+Confirm SSH access to `k8snode-2`
+```bash
+ssh -i /tmp/terraform-key.pem  odennav-admin@<k8snode-2 ipv4 address>
+```  
   
-   Confirm SSH access to k8snode-3:
-   ```bash
-   ssh -i /tmp/terraform-key.pem odennav-admin@<k8snode-3 ipv4 address>
-   ```
+Confirm SSH access to `k8snode-3`
+```bash
+ssh -i /tmp/terraform-key.pem odennav-admin@<k8snode-3 ipv4 address>
+```
 
-   Now you can now bootstrap them:
-   ```bash
-   cd ../bootstrap
-   ansible-playbook bootstrap.yml --limit k8s_master,k8s_node
-   ```
+Now you can now bootstrap them
+```bash
+cd ../bootstrap
+ansible-playbook bootstrap.yml --limit k8s_master,k8s_node
+```
 
-   **Set up Kubernetes Cluster**
+**Set up Kubernetes Cluster**
 
-   Your kube nodes are now ready to have a Kubernetes cluster installed on them.
-   Execute playbooks in this particular order:
+Your kube nodes are now ready to have a Kubernetes cluster installed on them.
 
-   ```bash
-   cd ../k8s
-   ansible-playbook k8s.yml  --limit k8s_master
-   ansible-playbook k8s.yml  --limit k8s_node
-   ```
+Execute playbooks in this particular order:
 
-   Check status of your nodes and confirm they're ready
-   ```console
-   kubectl get nodes
-   ```
+```bash
+cd ../k8s
+ansible-playbook k8s.yml  --limit k8s_master
+ansible-playbook k8s.yml  --limit k8s_node
+```
+
+Check status of your nodes and confirm they're ready
+```bash
+kubectl get nodes
+```
 
 
-3. **Bootstrap the NFS Server**
+**Bootstrap the NFS Server**
    
-   Bootstrap this server. This process updates the OS, creates a non-root user and sets up SSH such that the root user cannot log in remotely for
-   security.
-   Once the bootstrap is complete you will only be able to log in as `odennav-admin`
+Bootstrap this server.
 
-   ```bash
-   cd ../ansible/bootstrap
-   ansible-playbook bootstrap.yml --limit nfs_server
-   ```
+Once the bootstrap is complete you will only be able to log in as `odennav-admin`
 
-   **Create NFS share**
+```bash
+cd ../ansible/bootstrap
+ansible-playbook bootstrap.yml --limit nfs_server
+```
 
-   ```bash
-   cd ../nfs
-   ansible-playbook nfs.yml
-   ```
-   `/pv-share/` directory is created and made available to all nodes, but its not mounted yet by the nodes
+Create NFS share
+
+```bash
+cd ../nfs
+ansible-playbook nfs.yml
+```
+
+`/pv-share/` directory is created and made available to all nodes, but its not mounted yet by the nodes
    
    
-4. **Login to 1st node in cluster**
+Login to 1st node in cluster
 
-   ```bash
-   ssh -i /tmp/terraform-key.pem odennav-admin@<k8snode-1 ipv4 address>
-   ```
+```bash
+ssh -i /tmp/terraform-key.pem odennav-admin@<k8snode-1 ipv4 address>
+```
 
-   **Confirm nfs client is installed** 
-   ```bash
-   dpkg -l | grep nfs-common
-   ```
+Confirm nfs client is installed 
+```bash
+dpkg -l | grep nfs-common
+```
 
-   If not available:
-   ```bash
-   sudo apt install nfs-common
-   ```
+If not available:
+```bash
+sudo apt install nfs-common
+```
 
-5. **Create shared directory and mount nfs share**
+Create shared directory and mount nfs share
 
-   This directory will be mounted to `/pv-share/` created in NFS server.
+This directory will be mounted to `/pv-share/` created in NFS server.
 
-   ```bash
-   cd /
-   sudo mkdir /shared
-   sudo chmod 2770 /shared
-   sudo mount -t nfs <db-1 ipv4 address>:/pv-share /shared
-   ```
+```bash
+cd /
+sudo mkdir /shared
+sudo chmod 2770 /shared
+sudo mount -t nfs <db-1 ipv4 address>:/pv-share /shared
+```
 
-6. **Confirm NFS share is implemented**
+Confirm NFS share is implemented
 
-   Make a test file in `/shared/` dir on the cluster node. It should be present in `/pv-share/` dir on nfsserver.
+Make a test file in `/shared/` dir on the cluster node. It should be present in `/pv-share/` dir on nfsserver.
 
-   ```bash
-   sudo touch test-k8smaster
-   ```
+```bash
+sudo touch test-k8smaster
+```
 
-   `Repeat process from step 4 to step 6 for other kubernetes cluster nodes. Exit out of k8smaster node into devbuild and repeat steps above.`
-
+Repeat process for the other kubernetes cluster nodes.
 
 -----
 
 ## Create Dynamic Persistent Volume Provisioner
 
-1. **Login to k8smaster and Confirm Helm is installed**
+Persistent storage is required to store very important data and avoiding total loss of data.
 
-   Helm is an effective package manager for kubernetes
+Kubernetes deals with pods that have short life span, they could be stopped at any time and restarted on a different node, causing the container's filesystem to be lost with the pod.
 
-   ```conosle
-   helm version
-   ```
+This is not reliable, hence the need for filesystem that is available and accessibleirrespective of pod actions.
 
-   If not installed
-   ```bash
-   sudo snap install helm --classic
-   ```
+PV is configured to use different types of storage technology such as:
+
+- CephFS
+- iSCSI
+- NFS
+- Azure File
+
+We will use Network File System (NFS) which is a way of sharing a centralised filesystem across multiple nodes. 
+
+Although persistent storage is managed by kubernetes in the cluster, the actual storage is on nfs server which is not part of the kubernetes cluster and it is on different subnet.
+
+![](https://github.com/odennav/wordpress-mariadb-helm/blob/main/docs/1.png)
+
+### Persistent Volume
+
+Creating a PV within your cluster, tells Kubernetes that pods should have access to persistent storage that will outlive the pod and possibly the cluster itself.
 
 
-2. **Confirm persistent volume provisioner installed**
+### Persistent Volume Claims
+
+We want pods to access the PV created. To do this, a Persistent Volume Claim or PVC is required. 
+
+When PVC is created within a namespace, only pods in that namespace can mount it. However, it can be bound to any PV as these are not namespaced.
+
+It is possible that Kubernetes cannot bind the PVC to a valid PV and that the PVC remains unbound until a PV becomes available.
+
+This will lead to instances of pods in `Pending` state instead of `Running` state and PVC having `Unbound` status.
+
+### Mounting PVC
+
+Here access to PVC in the pod is done by mounting the storage as a volume within the container.
+
+Once PVC is mounted by the pod, the application within the Pod’s container(s) now have access to the persistent storage.
+
+Upon reschedule of pod(s), it will be reconnected to the same PV and will have access to the data it was using before it died, even if this is on another node.
+
+
+Login to `k8smaster` and Confirm `Helm` is installed
+
+Helm is an effective package manager for kubernetes
+
+```bash
+helm version
+```
+
+If not installed
+```bash
+sudo snap install helm --classic
+```
+
+
+Confirm persistent volume provisioner installed
    
-   Helm should be installed, then add & install nfs-subdir-external-provisioner package.
+```bash
+kubectl get all -n nfs-provisioner
+kubectl get sc -n nfs-provisioner
+```
+This should show dynamic provisioner setup and ready.
 
-   ```console
-   kubectl get all -n nfs-provisioner
-   kubectl get sc -n nfs-provisioner
-   ```
-   This should show dynamic provisioner setup and ready.
+If `PV provisioner` not installed, do it manually:
 
-   If pv provisioner not installed, do it manually:
-
-   ```console
-   helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
-   helm install -n nfs-provsioner --create-namespace nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=<db-1 ipv4 address> --set nfs.path=/pv-share
-   ```
+```bash
+helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
+helm install -n nfs-provsioner --create-namespace nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=<db-1 ipv4 address> --set nfs.path=/pv-share
+```
 
 
-3. **Setup PVC for Wordpress**
+**Setup PVC for Wordpress**
    
-   Our PV provisioner installed will dynamically provision PVs when PVCs are created.
-   We'll use kubens to switch between kubernetes namespaces.
+Our PV provisioner installed will dynamically provision PVs when PVCs are created.
 
-   ```bash
-   sudo snap install kubectx --classic
-   kubens --version
-   ```
+We'll use kubens to switch between kubernetes namespaces.
 
-   **Create wordpress namespace**
+```bash
+sudo snap install kubectx --classic
+kubens --version
+```
 
-   Assuming you've kubectl installed along with kubernetes cluster.
+Create wordpress namespace
 
-   ```console
-   kubectl create namespace wordpress
-   kubens wordpress
-   ```
+Assuming you've `kubectl` installed along with kubernetes cluster.
 
-   **Create PVC request on k8smaster**
+```bash
+kubectl create namespace wordpress
+kubens wordpress
+```
 
-   ```console
-   kubectl create -f wp-pvc.yaml
-   ```
+Create PVC request on k8smaster
 
-4. **Configure global Docker image parameters**
+```bash
+kubectl create -f wp-pvc.yaml
+```
 
-   Configure Wordpress Parameters
-   Match this parameters and replace the values, so we have an account to access Wordpress:
+**Configure global Docker image parameters**
+
+Configure Wordpress Parameters
+   
+Match this parameters and replace the values, so we have an account to access Wordpress:
 
    *wordpressUsername*
    
@@ -358,21 +363,22 @@ There are six sections to follow and implement as shown below:
    *wordpressScheme*
 
 
-   ```bash
-   sed -i '/wordpressUsername: user/wordpressUsername: odennav/' values.yaml
-   sed -i '/wordpressPassword: ""/wordpressPassword: odennav/' values.yaml
-   sed -i '/wordpressEmail: user@example.com/wordpressEmail: contact@odennav.com/' values.yaml
-   sed -i '/wordpressFirstName: FirstName/wordpressFirstName: odennav/' values.yaml
-   sed -i '/wordpressLastName: LastName/wordpressLastName: odennav/' values.yaml
-   sed -i '/wordpressBlogName: User's Blog!/wordpressBlogName: The Odennav Blog!/' values.yaml
-   sed -i '/wordpressScheme: http/wordpressScheme: https/' values.yaml
-   ```
+```bash
+sed -i '/wordpressUsername: user/wordpressUsername: odennav/' values.yaml
+sed -i '/wordpressPassword: ""/wordpressPassword: odennav/' values.yaml
+sed -i '/wordpressEmail: user@example.com/wordpressEmail: contact@odennav.com/' values.yaml
+sed -i '/wordpressFirstName: FirstName/wordpressFirstName: odennav/' values.yaml
+sed -i '/wordpressLastName: LastName/wordpressLastName: odennav/' values.yaml
+sed -i '/wordpressBlogName: User's Blog!/wordpressBlogName: The Odennav Blog!/' values.yaml
+sed -i '/wordpressScheme: http/wordpressScheme: https/' values.yaml
+```
 
 
-   **Configure Persistence and Database Parameters**
+**Configure Persistence and Database Parameters**
 
-   Enable persistence using persistence volume claims and peristence volume access modes.
-   Match and replace values for persistence and database parameters below:
+Enable persistence using persistence volume claims and peristence volume access modes.
+
+Match and replace values for persistence and database parameters below:
 
    *persistence.storageClass*
    
@@ -384,180 +390,178 @@ There are six sections to follow and implement as shown below:
    
    *mariadb.auth.password*
 
-   ```bash
-   sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
-   sed -i '/persistence:/,/volumePermissions:/ {/existingClaim: ""/s/""/pvc-wordpress}' values.yaml
-   
-   sed -i '/mariadb:/,/externalDatabase:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
-   sed -i '/mariadb:/,/externalDatabase:/ {/username: bn_wordpress/s/bn_wordpress/odennav_wordpress}' values.yaml
-   sed -i '/mariadb:/,/externalDatabase:/ {/password: ""/s/""/odennav}' values.yaml
-   ```
+```bash
+sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
+sed -i '/persistence:/,/volumePermissions:/ {/existingClaim: ""/s/""/pvc-wordpress}' values.yaml   
+sed -i '/mariadb:/,/externalDatabase:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
+sed -i '/mariadb:/,/externalDatabase:/ {/username: bn_wordpress/s/bn_wordpress/odennav_wordpress}' values.yaml
+sed -i '/mariadb:/,/externalDatabase:/ {/password: ""/s/""/odennav}' values.yaml
+```
 
-   **Configure PVC Access Modes**
+**Configure PVC Access Modes**
    
-   To access the /admin portal and enable WordPress scalability, a ReadWriteMany Persistent Volume Claim (PVC) is required.
+To access the /admin portal and enable WordPress scalability, a ReadWriteMany Persistent Volume Claim (PVC) is required.
       
       *persistence.accessModes*
       
       *persistence.accessMode*
 
-   ```bash
-   sed -i 's/ReadWriteOnce/ReadWriteMany/g' values.yaml
-   ```
+```bash
+sed -i 's/ReadWriteOnce/ReadWriteMany/g' values.yaml
+```
 
-   **Configure Replica Count**
+**Configure Replica Count**
 
-   Number of Wordpress replicas to deploy
+Number of Wordpress replicas to deploy
    
    *replicaCount*
 
-   ```bash
-   sed -i '/replicaCount: 1/replicaCount: 3/' values.yaml
-   ```
+```bash
+sed -i '/replicaCount: 1/replicaCount: 3/' values.yaml
+```
 
-   **Configure Auto Scaling**
+**Configure Auto Scaling**
    
-   Enable horizontal scalability of pod resources for Wordpress when traffic load is increased
+Enable horizontal scalability of pod resources for Wordpress when traffic load is increased
 
    *autoscaling.enabled*
 
-   ```bash
-   sed -i '/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
-   ```
+```bash
+sed -i '/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
+```
 
-   **Configure htaccess**
+**Configure htaccess**
    
-   For performance and security reasons, configure Apache with AllowOverride None and prohibit overriding directives with htaccess files
+For performance and security reasons, configure Apache with AllowOverride None and prohibit overriding directives with htaccess files
    
 
    *allowOverrideNone*
 
-   ```bash
-   sed -i '/allowOverrideNone: false/allowOverrideNone: true/' values.yaml
-   ```
+```bash
+sed -i '/allowOverrideNone: false/allowOverrideNone: true/' values.yaml
+```
 
 -----
 
 ## Install Wordpress and MariaDB with Helm chart
 
-1. **Install Wordpress and MariaDB**
+**Install Wordpress and MariaDB**
 
    Use Helm charts to bootstrap wordpress and mariadb deployment on kubernetes cluster.
 
-   ```console
-   helm repo update
-   ```
+```bash
+helm repo update
+```
 
-   Install the chart with release-name, my-wordpress
+Install the chart with release-name,`my-wordpress`
 
-   ```console
-   helm install -f values.yml my-wordpress oci://registry-1.docker.io/bitnamicharts/wordpress
-   ```
+```bash
+helm install -f values.yml my-wordpress oci://registry-1.docker.io/bitnamicharts/wordpress
+```
 
-   After installation, instructions will be printed to stdout.
+After installation, instructions will be printed to stdout.
 
 
-2. **Add Wordpress Secrets**
+**Add Wordpress Secrets**
    
-   We'll add wordpress credentials as a kubernetes secret.
-   From stdout above, Export the wordpress password to environment variable, WORDPRESS_PASSWORD
+We'll add wordpress credentials as a kubernetes secret.
 
-   ```bash
-   export WORDPRESS_PASSWORD=$(kubectl get secret --namespace wordpress my-wordpress -o jsonpath="{.data.wordpress-password}" | base64 -d)
-   ```
+From stdout above, Export the wordpress password to environment variable, `WORDPRESS_PASSWORD`
 
-   Then create secret:
+```bash
+export WORDPRESS_PASSWORD=$(kubectl get secret --namespace wordpress my-wordpress -o jsonpath="{.data.wordpress-password}" | base64 -d)
+```
 
-   ```console
-   kubectl create secret generic db-user-pass \
+Then create secret:
+
+```bash
+kubectl create secret generic db-user-pass \
    --from-literal=username=wordpress \
    --from-literal=password=$WORDPRESS_PASSWORD
-   ```
+```
 
-   Delete environment variable, to prevent non-admin users viewing it's value.
+Delete environment variable, to prevent non-admin users viewing it's value.
 
-   ```bash
-   unset WORDPRESS_PASSWORD
-   ```
+```bash
+unset WORDPRESS_PASSWORD
+```
+
 -----
 
 ## Connect to Wordpress and MariaDB
 
-1. **Confirm PVCs are bound**
+**Confirm PVCs are bound**
 
-   This confirms the applications installed will have access to persistent storage
+This confirms the applications installed will have access to persistent storage
 
-   ```console
-   kubectl get pvc -n wordpress
-   ```
-
-
-2. **Check service created**
-
-   ```console
-   kubectl get svc -n wordpress
-   ```
+```bash
+kubectl get pvc -n wordpress
+```
 
 
-3. **HTTP access to Wordpress pods** 
+Check service created
 
-   Export IPv4 address and port
-
-   ```bash
-   export NODE_PORT=$(kubectl get --namespace wordpress -o jsonpath="{.spec.ports[0].nodePort}" services my-wordpress)
-   export NODE_IP=$(kubectl get nodes --namespace wordpress -o jsonpath="{.items[0].status.addresses[0].address}")
-   echo "WordPress URL: http://$NODE_IP:$NODE_PORT/"
-   echo "WordPress Admin URL: http://$NODE_IP:$NODE_PORT/admin"
-   ```
-
-   HTTP request to Wordpress site
-   ```bash
-   curl http://$NODE_IP:$NODE_PORT/
-   ```
+```bash
+kubectl get svc -n wordpress
+```
 
 
-4. **Service - Host port forwarding**
+HTTP access to Wordpress pods 
 
-   Set up a port forward from the Service to the host on the master node.
+Export IPv4 address and port
 
-   ```console
-   kubectl port-forward — namespace wordpress
-   ```
+```bash
+export NODE_PORT=$(kubectl get --namespace wordpress -o jsonpath="{.spec.ports[0].nodePort}" services my-wordpress)
+export NODE_IP=$(kubectl get nodes --namespace wordpress -o jsonpath="{.items[0].status.addresses[0].address}")
+echo "WordPress URL: http://$NODE_IP:$NODE_PORT/"
+echo "WordPress Admin URL: http://$NODE_IP:$NODE_PORT/admin"
+```
 
-5. **Host - Local port forwarding**
+HTTP request to Wordpress site
+```bash
+curl http://$NODE_IP:$NODE_PORT/
+```
 
-   Set up a port forward from the host machine to the development machine.
 
-   ```bash
-   ssh -L 54321:localhost:5432 k8snode-1@<k8snode-1 ipv4-address> -i /tmp/terraform-key.pem
-   ```
+Set up a port forward from the Service to the host on the master node.
+
+```bash
+kubectl port-forward — namespace wordpress
+```
+
+Set up a port forward from the host machine to the development machine.
+
+```bash
+ssh -L 54321:localhost:5432 k8snode-1@<k8snode-1 ipv4-address> -i /tmp/terraform-key.pem
+```
 
 ----
 
 ## Test Data Persistence
 
-1. **Check pods running**
+Check pods running
    
-   Confirm mariadb pods are in 'Ready' state
+Confirm mariadb pods are in 'Ready' state
 
-   ```console
-   kubectl get pods -n wordpress
-   ```
+```bash
+kubectl get pods -n wordpress
+```
 
-2. **Delete pods**
+Delete pods
 
-   ```console
-   kubectl delete pod <pod name> -n wordpress
-   ```
+```bash
+kubectl delete pod <pod name> -n wordpress
+```
 
-3. **Restart port forwards**
-   ```console
-   kubectl port-forward — namespace wordpress
-   ssh -L 54321:localhost:5432 k8snode-1@<k8snode-1 ipv4-address> -i ~/.ssh/id_rsa
-   ```
+Restart port forwards
+```bash
+kubectl port-forward — namespace wordpress
+ssh -L 54321:localhost:5432 k8snode-1@<k8snode-1 ipv4-address> -i ~/.ssh/id_rsa
+```
 
-   Upon deletion of pod, another instance is automatically scheduled.
-   You'll still be able to access your database with data still intact.
+Upon deletion of pod, another instance is automatically scheduled.
+
+You'll still be able to access your database with data still intact.
 
 
 -----
@@ -571,38 +575,38 @@ The Bitnami WordPress Helm chart includes native support for Ingress routes and 
 Create namespace for ingress controller
 Then switch to ingress-nginx namespace
 
-```console
+```bash
 kubectl create namespace ingress-nginx
 kubens ingress-nginx
 ```
 
 Pull the chart sources:
 
-```console
+```bash
 helm pull oci://ghcr.io/nginxinc/charts/nginx-ingress --untar --version 1.2.0
 ```
 
 Change working directory to nginx-ingress:
 
-```shell
+```bash
 cd nginx-ingress
 ```
 
 Upgrade the CRDs:
 
-```console
+```bash
 kubectl apply -f crds/
 ```
 
 Install the chart with the release name, ingress-nginx
 
-```console
+```bash
 helm install ingress-nginx .
 ```
 
 Next, check if the Helm installation was successful by running command below:
 
-```console
+```bash
 helm ls -n ingress-nginx
 ```
 
@@ -616,7 +620,7 @@ Next, you will add the required `A` record for the wordpress application.
 Please note, you need to identify the load balancer `external IP` created by the `nginx` deployment:
 
 
-```console
+```bash
 kubectl get svc -n ingress-nginx
 ```
 
@@ -624,7 +628,7 @@ kubectl get svc -n ingress-nginx
 
 First, add the `jetstack` Helm repo, and list the available charts:
 
-```console
+```bash
 helm repo add jetstack https://charts.jetstack.io
 
 helm repo update jetstack
@@ -632,7 +636,7 @@ helm repo update jetstack
 
 Next, install Cert-Manager using Helm:
 
-```console
+```bash
 helm install cert-manager jetstack/cert-manager --version 1.8.0 \
   --namespace cert-manager \
   --create-namespace \
@@ -641,7 +645,7 @@ helm install cert-manager jetstack/cert-manager --version 1.8.0 \
 
 Finally, check if Cert-Manager installation was successful by running below command:
 
-```console
+```bash
 helm ls -n cert-manager
 ```
 
@@ -668,33 +672,58 @@ spec:
     # You must replace this email address with your own.
     # Let's Encrypt will use this to contact you about expiring
     # certificates, and issues related to your account.
-    email:  <YOUR-EMAIL-HERE>
+    email:  odennav@gmail.com
     server: https://acme-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
       # Secret resource used to store the account's private key.
       name: prod-issuer-account-key
-    # Add a single challenge solver, HTTP01 using nginx
+    # Add a single challenge solver for Cloudflare
     solvers:
-    - http01:
-        ingress:
-          class: nginx
+      - dns01:
+          cloudflare:
+            email: odennav@gmail.com
+            apiTokenSecretRef:
+              name: cloudflare-token-secret
+              key: cloudflare-token
+        selector:
+          dnsZones:
+            - <YOUR DOMAIN>  # odennav.com
 ```
 
 Apply via kubectl:
 
-```console
+```bash
 cd wordpress-mariadb-helm/
 kubectl apply -f cluster-manifest/letsencrypt-issuer-values.yaml
 ```
 
-To secure WordPress traffic, open the helm `values.yaml` file in cluster-manifest/, and add the following settings:
+Create a certificate for the `wordpress` namespace
+```bash
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: local-odennav-com
+  namespace: wordpress
+spec:
+  secretName: local-odennav-com-tls
+  issuerRef:
+    name: prod-issuer-acount-key
+    kind: ClusterIssuer
+  commonName: "*.odennav.com"
+  dnsNames:
+  - "<YOUR DOMAIN>"      # odennav.com
+  - "*.<YOUR DOMAIN>"    # *.odennav.com
+```
+
+To secure WordPress traffic, open the helm `values.yaml` file in the `cluster-manifest` directory and add the following:
 
 ```yaml
 # Enable ingress record generation for WordPress
 ingress:
   enabled: true
   certManager: true
-  tls: false
+  tls:
+    secretName: local-odennav-com-tls
   hostname: <YOUR_WORDPRESS_DOMAIN_HERE>
   annotations:
     kubernetes.io/ingress.class: "nginx"
@@ -702,12 +731,11 @@ ingress:
   extraTls:
   - hosts:
       - <YOUR_WORDPRESS_DOMAIN_HERE>
-    secretName: wordpress.local-tls
 ```
 
 Upgrade via `helm`:
 
-```console
+```bash
 helm upgrade wordpress bitnami/wordpress \
     --namespace wordpress \
     --version 22.0.0 \
@@ -717,7 +745,7 @@ helm upgrade wordpress bitnami/wordpress \
 
 This automatically creates a certificate through cert-manager. You can then verify that you've successfully obtained the certificate by running the following command:
 
-```console
+```bash
 kubectl get certificate -n wordpress wordpress.local-tls
 ```
 
@@ -744,7 +772,7 @@ metrics:
 
 Apply changes using Helm:
 
-```console
+```bash
 helm upgrade wordpress bitnami/wordpress \
     --create-namespace \
     --namespace wordpress \
@@ -755,7 +783,7 @@ helm upgrade wordpress bitnami/wordpress \
 
 Next, port-forward the wordpress service to inspect the available metrics:
 
-```console
+```bash
 kubectl port-forward --namespace wordpress svc/wordpress-metrics 9150:9150
 ```
 
@@ -789,7 +817,15 @@ For more plugins, visit <https://wordpress.org/plugins/>
 
 ### Enhancing Wordpress Performance
 
-Content Delivery Network (CDN) is a straightforward method to accelerate a WordPress website. A CDN consists of servers strategically positioned to optimize the delivery of media files, thereby enhancing the loading speed of web pages. Many websites encounter latency issues when their visitors are located far from the server location. By utilizing a CDN, content delivery can be expedited by relieving the web server of the task of serving static content such as images, CSS, JavaScript, and video streams. Additionally, caching static content minimizes latency. Overall, CDN serves as a dependable and effective solution for optimizing websites and enhancing the global user experience.
+Content Delivery Network (CDN) is a straightforward method to accelerate a WordPress website. 
+
+A CDN consists of servers strategically positioned to optimize the delivery of media files, thereby enhancing the loading speed of web pages. 
+
+Many websites encounter latency issues when their visitors are located far from the server location. 
+
+By utilizing a CDN, content delivery can be expedited by relieving the web server of the task of serving static content such as images, CSS, JavaScript, and video streams. 
+
+Additionally, caching static content minimizes latency. Overall, CDN serves as a dependable and effective solution for optimizing websites and enhancing the global user experience.
 
 
 ### Configuring Cloudflare
@@ -801,11 +837,17 @@ Cloudflare account is required for this configuration. Visit the [Cloudflare web
 Below are the steps to configure Cloudflare for your WordPress site:
 
 1. Log in to the Cloudflare dashboard using your account credentials and click on the `+ Add Site` button.
+
 2. Enter your WordPress site's domain and click `Add Site`.
+
 3. Choose the `Free` plan and click `Get Started`.
+
 4. From `Review DNS records` and click `Add record`. Add an `A` record with your desired name and the `IPv4 address` of your cloud provider load balancer. Click `Continue`.
+
 5. Follow instructions to change your domain registrar's nameservers to Cloudflare's nameservers.
+
 6. After updating nameservers, click `Done, check nameservers`.
+
 7. Cloudflare may offer configuration recommendations; you can skip these for now by clicking `Skip recommendations`.
 
 An email will confirm when your site is active on Cloudflare.
@@ -817,29 +859,30 @@ Use the Analytics page in your Cloudflare account to monitor web traffic on your
 ###  Remove Wordpress and MariaDB
    If you're taking the option to remove both applications, implement the following:
 
-1. **Delete PVC**
+**Delete PVC**
    
-   This removes and unbounds PVC from PV.
+This removes and unbounds PVC from PV.
 
-   ```console
-   kubectl delete -f pg-pvc.yml 
-   ```
+```bash
+kubectl delete -f pg-pvc.yml 
+```
 
-2. **Delete Namespaces**
+**Delete Namespaces**
 
-   ```console
-   kubectl delete ns wordpress
-   kubectl delete ns ingress-nginx
-   ```
+```bash
+kubectl delete ns wordpress
+kubectl delete ns ingress-nginx
+```
 
-3. **Destroy AWS resources**
+**Destroy AWS resources**
 
-   From your local machine:
+From your local machine:
 
-   ```console
-   terraform destroy
-   ```
+```bash
+terraform destroy
+```
 
+-----
 
 
 Enjoy!   
