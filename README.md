@@ -737,7 +737,7 @@ ingress:
 Upgrade via `helm`:
 
 ```bash
-helm upgrade wordpress bitnami/wordpress \
+helm upgrade my-wordpress bitnami/wordpress \
     --namespace wordpress \
     --version 22.0.0 \
     --timeout 10m0s \
@@ -747,14 +747,14 @@ helm upgrade wordpress bitnami/wordpress \
 This automatically creates a certificate through cert-manager. You can then verify that you've successfully obtained the certificate by running the following command:
 
 ```bash
-kubectl get certificate -n wordpress wordpress.local-tls
+kubectl get certificate -n wordpress
 ```
 
 If successful, the output's READY column reads True:
 
 ```text
-NAME                  READY   SECRET                AGE
-wordpress.local-tls   True    wordpress.local-tls   24h
+NAME                    READY   SECRET                  AGE
+local-odennav-com-tls   True    local-odennav-com-tls   24h
 ```
 
 Now, you can access WordPress using the domain configured earlier. You will be guided through the `installation` process.
