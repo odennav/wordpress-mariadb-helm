@@ -1,0 +1,8 @@
+#!/bin/bash
+
+sudo yum update
+sudo yum install net-tools
+sudo yum install git
+sudo ifconfig
+
+echo "END"
