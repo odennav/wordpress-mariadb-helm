@@ -4,7 +4,7 @@ Provision infrastructure in AWS and deploy WordPress with MariaDB in Kubernetes 
 
 ----
 
-# Getting Started
+## Getting Started
 
 There are six sections to follow and implement as shown below:
 - Provision AWS Infrastructure
