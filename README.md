@@ -662,7 +662,7 @@ cert-manager    cert-manager    1               2024-04-08 18:02:08.124264 +0300
 
 A cluster issuer is required first, in order to obtain the final TLS certificate. Open and inspect the `cluster-manifest/letsencrypt-issuer-values.yaml` file provided in this repository:
 
-```yaml
+```text
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -718,7 +718,7 @@ spec:
 
 To secure WordPress traffic, open the helm `values.yaml` file in the `cluster-manifest` directory and add the following:
 
-```yaml
+```text
 # Enable ingress record generation for WordPress
 ingress:
   enabled: true
@@ -763,9 +763,9 @@ Now, you can access WordPress using the domain configured earlier. You will be g
 
 In this section, you will learn how to enable metrics for monitoring your WordPress instance.
 
-First, open the `wordpress-values.yaml` created earlier in this tutorial, and set `metrics.enabled` field to `true`:
+First, open the `wordpress-values.yaml` created earlier in this tutorial, and set `metrics.enabled` field to `true`.
 
-```yaml
+```bash
 # Prometheus Exporter / Metrics configuration
 metrics:
   enabled: true
@@ -774,7 +774,7 @@ metrics:
 Apply changes using Helm:
 
 ```bash
-helm upgrade wordpress bitnami/wordpress \
+helm upgrade my-wordpress bitnami/wordpress \
     --create-namespace \
     --namespace wordpress \
     --version 22.0.0 \
@@ -788,7 +788,7 @@ Next, port-forward the wordpress service to inspect the available metrics:
 kubectl port-forward --namespace wordpress svc/wordpress-metrics 9150:9150
 ```
 
-Now, open a web browser and navigate to [localhost:9150/metrics](http://127.0.0.1:9150/metrics), to see all WordPress metrics.
+Browse to `localhost:9150/metrics` to see all WordPress metrics.
 
 Finally, you need to configure Grafana and Prometheus to visualise metrics exposed by your new WordPress instance.
 
