@@ -342,25 +342,25 @@ Create PVC request on k8smaster
 kubectl create -f wp-pvc.yaml
 ```
 
-**Configure global Docker image parameters**
 
-Configure Wordpress Parameters
-   
-Match this parameters and replace the values, so we have an account to access Wordpress:
 
-   *wordpressUsername*
+**Configure Wordpress Parameters**
    
-   *wordpressPassword*
-   
-   *wordpressEmail*
-   
-   *wordpressFirstName*
-   
-   *wordpressLastName*
-   
-   *wordpressBlogName*
+Match this parameters and replace the values, so we have an account to access Wordpress
 
-   *wordpressScheme*
+- *wordpressUsername*
+   
+- *wordpressPassword*
+   
+- *wordpressEmail*
+   
+- *wordpressFirstName*
+   
+- *wordpressLastName*
+   
+- *wordpressBlogName*
+
+- *wordpressScheme*
 
 
 ```bash
@@ -380,15 +380,15 @@ Enable persistence using persistence volume claims and peristence volume access 
 
 Match and replace values for persistence and database parameters below:
 
-   *persistence.storageClass*
+- *persistence.storageClass*
    
-   *persistence.existingClaim*
+- *persistence.existingClaim*
    
-   *mariadb.primary.persistence.storageClass*
+- *mariadb.primary.persistence.storageClass*
    
-   *mariadb.auth.username*
+- *mariadb.auth.username*
    
-   *mariadb.auth.password*
+- *mariadb.auth.password*
 
 ```bash
 sed -i '/persistence:/,/volumePermissions:/ {/storageClass: ""/s/""/nfs-client}' values.yaml
@@ -415,7 +415,7 @@ sed -i 's/ReadWriteOnce/ReadWriteMany/g' values.yaml
 
 Number of Wordpress replicas to deploy
    
-   *replicaCount*
+- *replicaCount*
 
 ```bash
 sed -i '/replicaCount: 1/replicaCount: 3/' values.yaml
@@ -425,7 +425,7 @@ sed -i '/replicaCount: 1/replicaCount: 3/' values.yaml
    
 Enable horizontal scalability of pod resources for Wordpress when traffic load is increased
 
-   *autoscaling.enabled*
+- *autoscaling.enabled*
 
 ```bash
 sed -i '/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
@@ -436,7 +436,7 @@ sed -i '/autoscaling:/,/metrics:/ {/enabled: false/s/"false"/true}' values.yaml
 For performance and security reasons, configure Apache with AllowOverride None and prohibit overriding directives with htaccess files
    
 
-   *allowOverrideNone*
+- *allowOverrideNone*
 
 ```bash
 sed -i '/allowOverrideNone: false/allowOverrideNone: true/' values.yaml
