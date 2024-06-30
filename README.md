@@ -1,4 +1,4 @@
-# Deploy Production-ready WordPress and MariaDB on AWS Kubernetes.
+# Deploy WordPress with MariaDB in Kubernetes Cluster.
 
 Provision infrastructure in AWS and deploy WordPress with MariaDB in Kubernetes Cluster using Helm charts.
 
