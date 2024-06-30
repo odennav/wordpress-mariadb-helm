@@ -400,11 +400,12 @@ sed -i '/mariadb:/,/externalDatabase:/ {/password: ""/s/""/odennav}' values.yaml
 
 **Configure PVC Access Modes**
    
-To access the /admin portal and enable WordPress scalability, a ReadWriteMany Persistent Volume Claim (PVC) is required.
+To access the `/admin` portal and enable WordPress scalability, a `ReadWriteMany` Persistent Volume Claim (PVC) is required.
+
       
-      *persistence.accessModes*
+- *persistence.accessModes*
       
-      *persistence.accessMode*
+- *persistence.accessMode*
 
 ```bash
 sed -i 's/ReadWriteOnce/ReadWriteMany/g' values.yaml
